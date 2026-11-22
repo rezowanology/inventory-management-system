@@ -22,3 +22,15 @@ describe('applyServerErrors', () => {
     expect(setError).not.toHaveBeenCalled()
   })
 })
+
+describe('applyServerErrors with array rows', () => {
+  it('maps "components[1].componentBarcode" onto the react-hook-form path "components.1.componentBarcode"', () => {
+    const setError = vi.fn()
+    const error = new ApiError({
+      status: 422, title: 'x', fieldErrors: { 'components[1].componentBarcode': ['Component X is already attached to unit Y'] },
+    })
+    const rest = applyServerErrors(error, setError, ['components.0.componentBarcode', 'components.1.componentBarcode'])
+    expect(setError).toHaveBeenCalledWith('components.1.componentBarcode', { type: 'server', message: 'Component X is already attached to unit Y' })
+    expect(rest).toBeNull()
+  })
+})

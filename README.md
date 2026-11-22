@@ -4,9 +4,9 @@ A barcode-based inventory system that follows one physical unit from **component
 It has five roles (one per user, enforced on the server), an append-only inventory history, admin-only reversals,
 reports, CSV/Excel export, an audit log and a dashboard. This is an industrial-attachment learning/demo project.
 
-**Status: Day 2 of 6 - admin panel done.** Login, the full database schema, the seeded sample record, `/history`, the
-dashboard numbers, the **admin panel** (products, components, points, users), password change and forced logout work.
-Operations, reversals, reports, audit log and export arrive on Days 3-5 (their screens and endpoints exist as stubs).
+**Status: Day 3 of 6 - operations done.** Login, the admin panel, **component tracking, receiving and delivery** (with the
+duplicate-scan warning), a filterable `/history`, password change and forced logout work. Reversals, reports, audit log and
+export arrive on Days 4-5 (their screens and endpoints exist as stubs).
 
 ## Stack and why
 
@@ -118,6 +118,33 @@ user menu (top right).
 - **Lists keep their state in the URL** (`?q=&status=&page=`), so Back, refresh and copied links keep the filters.
 - **Dropdown feed:** `GET /api/<products|components|points>/options` returns non-archived rows only (also for the operational roles).
 - **Export buttons** are on every list but the API answers 501 until Day 4.
+
+## Operations (Day 3)
+
+The life of one unit: **track components -> receive -> deliver**. Sign in as `tracker`, `receiver` and `deliverer` (see the seeded
+logins). Each screen starts with a barcode box that already has the cursor: scan (a USB scanner types the barcode and presses
+**Enter**) or type, then press Enter. Barcodes are upper-cased as you type. A unit card shows the product, the status
+(**New barcode** amber, **Registered** grey, **In stock** green, **Delivered** blue), the attached components and the last events.
+After a successful save the form clears and the cursor returns to the barcode box ("scan next"); the last chosen point is remembered
+for the browser session.
+
+- **Track components** (`/ops/track`): scan the unit. A new barcode asks for its **product**. Choose the track point, then scan
+  components one by one (component type + component barcode, Enter adds the row) and **Save**: all rows are written together, or none.
+  Scanning the same component twice, or the unit's own barcode, shows a yellow *Duplicate scan* warning and is not added.
+  A component already attached to another unit is refused: "Component 94A600321852 is already attached to unit 2440701AK2057".
+- **Receive** (`/ops/receive`): only a unit that is neither in stock nor delivered can be received. Receiving a unit that is already
+  in stock shows a yellow warning with the point, time and user of the first receive, and saves nothing. A delivered unit is refused.
+- **Deliver** (`/ops/deliver`): the Save button works only for units that are **in stock**; an unknown, unreceived or already delivered
+  barcode is a clear error.
+- **History** (`/history`, Admin and Report Viewer): filter by event, product, point, user and date range (days are local days in the
+  configured zone), search by unit barcode, component barcode or product, page through the results. The filters are in the URL.
+- **Warning or error?** A *warning* (HTTP 409, yellow) means "the unit is already in that state"; an *error* (HTTP 422, red) means a
+  rule was broken. Neither saves anything.
+- **Safety net:** besides `InventoryService`, a PostgreSQL trigger (`check_transaction`, migration `TransactionChecks`) refuses a row
+  with the wrong point type, an already attached component barcode, or a reversal of a reversal, even for raw SQL.
+
+API: `GET /api/units/lookup?barcode=`, `POST /api/ops/track | receive | deliver` (each answers with the unit's updated state),
+`GET /api/history` with `eventType, pointId, productId, userId, from, to, q, page, pageSize, sort`.
 
 ## Project layout
 

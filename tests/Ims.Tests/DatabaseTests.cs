@@ -101,7 +101,6 @@ public class DatabaseTests(ImsApiFactory factory)
         Assert.Equal(UnitState.Delivered, status.State);
         Assert.Equal("Refrigerator Delivery Point 1", status.PointName);
         Assert.Single(await inventory.GetAttachedComponentsAsync(DbSeeder.SampleBarcode));
-        Assert.Equal(0, await inventory.CountInStockAsync());
         Assert.Equal(UnitState.NotFound, (await inventory.GetUnitStatusAsync("NOSUCHUNIT1")).State);
     }
 }

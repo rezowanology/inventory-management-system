@@ -8,6 +8,9 @@ import { ChangePasswordPage } from './pages/ChangePasswordPage'
 import { MASTER_KINDS } from './pages/manage/constants'
 import { MasterDataPage } from './pages/manage/MasterDataPage'
 import { UsersPage } from './pages/manage/UsersPage'
+import { DeliverPage } from './pages/ops/DeliverPage'
+import { ReceivePage } from './pages/ops/ReceivePage'
+import { TrackPage } from './pages/ops/TrackPage'
 import { ForbiddenPage } from './pages/ForbiddenPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { HomePage } from './pages/HomePage'
@@ -33,9 +36,9 @@ export function App() {
         <Route path="/forbidden" element={<ForbiddenPage />} />
         <Route path="/change-password" element={guarded(CAP.changePassword, <ChangePasswordPage />)} />
 
-        <Route path="/ops/track" element={guarded(CAP.opsTrack, <StubPage title="Track components" day={3} />)} />
-        <Route path="/ops/receive" element={guarded(CAP.opsReceive, <StubPage title="Receive units" day={3} />)} />
-        <Route path="/ops/deliver" element={guarded(CAP.opsDeliver, <StubPage title="Deliver units" day={3} />)} />
+        <Route path="/ops/track" element={guarded(CAP.opsTrack, <TrackPage />)} />
+        <Route path="/ops/receive" element={guarded(CAP.opsReceive, <ReceivePage />)} />
+        <Route path="/ops/deliver" element={guarded(CAP.opsDeliver, <DeliverPage />)} />
 
         <Route path="/history" element={guarded(CAP.historyView, <HistoryPage />)} />
         <Route path="/history/:id/reverse" element={guarded(CAP.historyReverse, <StubPage title="Reverse a history row" day={4} />)} />

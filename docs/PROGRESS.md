@@ -16,3 +16,9 @@
 - **Next:** Day 3 - track / receive / deliver with the inventory rules, duplicate-scan warning and DB safety triggers.
 - **Risk:** audit logging of admin actions is Day 5 (carry-over); Day 3 is heavy.
 
+## Day 3 - 22 Nov 2026
+- **Works:** Track (new unit registers with a product, batch of components, all-or-nothing), Receive, Deliver, the duplicate-scan warning (409: point, time, user), clear 422 errors, a database trigger as a safety net, and `/history` with filters (event, product, point, user, date range), search and paging.
+- **Tests:** 64 .NET tests (24 new: every rule R2-R5, batch atomicity, trigger via raw SQL, archived data, 403s, lookup shape, history filters) and 29 Vitest tests, all passing.
+- **Checked in the browser (as admin):** a new barcode in Track shows the amber card and product select; scanning the same component twice shows the yellow warning; saving a component owned by another unit shows the error on its row and in the alert; History filtered by DELIVERED. The full tracker -> receiver -> deliverer walk with the three role accounts was covered by API tests, not clicked through.
+- **Next:** Day 4 - reversals, the three reports with a chart, CSV/Excel export.
+- **Risk:** Day 4 is heavy (reversal rules plus three reports).

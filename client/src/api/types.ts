@@ -90,3 +90,46 @@ export interface UpdateUserInput {
   employeeNo: string
   role: Role
 }
+
+export type UnitStatusName = 'NotFound' | 'Registered' | 'InStock' | 'Delivered'
+
+export interface UnitEvent {
+  id: number
+  eventType: string
+  pointName: string
+  componentName: string | null
+  componentBarcode: string | null
+  performedBy: string
+  occurredAt: string
+}
+
+export interface AttachedComponent {
+  componentName: string
+  componentBarcode: string
+  trackedAt: string
+}
+
+/** Answer of GET /api/units/lookup and of every ops call. */
+export interface UnitLookup {
+  barcode: string
+  exists: boolean
+  product: string | null
+  status: UnitStatusName
+  currentPoint: string | null
+  since: string | null
+  components: AttachedComponent[]
+  recentEvents: UnitEvent[]
+}
+
+export interface TrackInput {
+  barcode: string
+  productId?: number
+  trackPointId: number
+  components: { componentId: number; componentBarcode: string }[]
+}
+
+export interface HistoryFilterOptions {
+  products: Option[]
+  points: Option[]
+  users: Option[]
+}

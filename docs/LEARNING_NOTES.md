@@ -99,3 +99,38 @@ so comparisons to C++ are included where they help.
 - **A global 401 handler.** `api/client.ts` calls the handler registered by `AuthProvider`; `Layout.tsx` also asks `/api/auth/me` on
   every page change, so a deactivated user lands on the login page with "Your session has ended".
 
+## Day 3 - 22 Nov 2026 (operations: track, receive, deliver)
+
+### .NET
+
+- **Service layer and DI lifetimes.** All inventory rules live in `Services/InventoryService.cs`; controllers (`Controllers/OpsControllers.cs`)
+  only check the request shape and call it. `Program.cs` registers it with `AddScoped` (one instance per HTTP request, sharing that request's
+  `DbContext`) and `IClock` with `AddSingleton` (stateless, one for the whole app).
+- **async/await with EF Core.** Every database call is `await`ed (`ToListAsync`, `SaveChangesAsync`); the thread is free while PostgreSQL works.
+  `CancellationToken ct` is passed along so a cancelled request stops its queries.
+- **LINQ.** `EffectiveRows()` is a query built from `Where`, `Any` and `Select` that EF translates to SQL; `ToDictionary` then works on
+  the loaded rows in memory (for example `taken` in `TrackAsync`).
+- **Transactions and locking.** `BeginTransactionAsync` groups the checks and inserts; leaving the method without `CommitAsync` rolls back.
+  `FromSql($"SELECT ... FOR UPDATE")` locks the unit row so two scans of one barcode run one after the other. `FromSql` with `$"..."`
+  sends the values as SQL parameters, never as pasted text.
+- **Custom exceptions to ProblemDetails.** `DomainException` (422) and `DuplicateScanException` (409) are thrown by the service;
+  `Infrastructure/ApiExceptionHandler.cs` is the only place that turns them into JSON, so the rules never mention HTTP.
+- **Database trigger.** `Data/Migrations/*_TransactionChecks.cs` creates a PL/pgSQL function and a `BEFORE INSERT` trigger as a second line of
+  defence. A `CASE` is computed into a variable first because it cannot sit inside an `IF` condition.
+- **Model binding.** `HistoryListQuery` inherits `ListQuery` and adds filters; `[FromQuery]` fills them from `?eventType=&from=...` by name.
+
+### React
+
+- **Custom hooks.** `hooks/useUnitLookup.ts`, `useOptions.ts`, `useRememberedPoint.ts` and `pages/ops/useOpsPage.ts` hold logic that several
+  pages share, so a page only describes its screen.
+- **useFieldArray.** `pages/ops/TrackPage.tsx` keeps the list of scanned components inside the react-hook-form state: `append` adds a row,
+  `remove` deletes one, `errors.components[i]` carries each row's error. `lib/serverErrors.ts` turns the server key `components[2].componentBarcode`
+  into the form path `components.2.componentBarcode`.
+- **Refs and focus.** `codeInput.current?.focus()` returns the cursor to the component barcode box after each add. For "scan next" the page
+  changes the `key` of `ScanPanel`; React then builds a new panel, and `autoFocus` focuses it.
+- **Query invalidation after mutations.** `useOpsPage.finish` calls `invalidateQueries` for `['unit']`, `['history']` and `['dashboard']`, so
+  the unit card, history and counts reload after a save. The query key `['unit', barcode]` is shared by `ScanPanel` and the page, so there is
+  only one request.
+- **State in the URL.** `HistoryPage.tsx` keeps all filters in the query string with `useListParams`, so a filtered history can be bookmarked.
+- **Testing UI.** `ScanPanel.test.tsx` replaces `fetch` with a fake (`vi.stubGlobal`) and types into the input like a user; `lib/batch.test.ts`
+  tests the duplicate rule as a plain function.

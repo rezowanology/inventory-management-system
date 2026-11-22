@@ -65,6 +65,25 @@ Every judgment call: date, decision, reason. The **Carry-over** section at the b
 | Vitest setup now unmounts components after each test | Without globals React Testing Library does not clean up by itself |
 | Master-data and user changes are NOT written to `audit_log` yet | `AuditInterceptor` is Day 5 work (the plan puts the audit log there); R13 is completed then |
 
+## Day 3 choices (22 Nov 2026)
+
+| Decision | Reason |
+|---|---|
+| **Warning vs error:** a scan that repeats the unit's current state (receive an in-stock unit; track a component already on this unit) is a **409 duplicate-scan warning** with when/where/by; every rule violation (component on another unit, delivered unit, wrong status, wrong point type, archived data, bad barcode) is a **422**. Neither saves anything | A8. The user sees "someone already did this" without it looking like a failure |
+| Deliver of an already delivered unit is a 422 (not a warning) | The brief asks for "a clear error" |
+| **Row locking:** each operation opens a transaction and loads the unit with `SELECT ... FOR UPDATE`. A brand-new barcode has no row to lock, so two simultaneous first scans race on the unique index on `units.barcode`; the loser gets a friendly 422 `concurrent-scan` | Enough for demo scale; avoids advisory locks |
+| Validation errors of a Track batch use keys like `components[2].componentBarcode`; the client maps them onto the matching row | The whole batch is validated first, so every bad row is reported at once |
+| If a batch has both real errors and a duplicate on this unit, the errors win (422) | Fixing hard errors first is less confusing than a warning |
+| `InventoryService` returns the updated unit (`UnitLookupDto`) from every operation | The UI refreshes without another call |
+| Added `IClock`/`SystemClock` (`Services/Clock.cs`) | One place for "now" (UTC) |
+| Lookup `recentEvents` shows the last 5 rows including reversals; `components` shows only effective ones | History stays honest; the card shows the current state |
+| Added `GET /api/history/filter-options` (products, points, users incl. archived) with `history.view` | The Report Viewer may not call `/options` (`ops.lookup`) but needs dropdowns for the history filters |
+| History date filters are local days in `App:TimeZone` converted to UTC | A12; the seeded 10:00 Dhaka row is found by `from=to=2026-03-27` |
+| Track page keeps the chosen point outside the form (dropdown + sessionStorage) and checks it on submit | Options load after the form is created; avoids syncing state with an effect |
+| Pages "scan next" by changing the `key` of `ScanPanel` | Remounting clears the box and `autoFocus` puts the cursor back; no refs or effects |
+| Older tests that assumed an empty test database (dashboard counts, history total) now look only at the seeded sample unit | All test classes share `ims_test`, and the new operation tests add units |
+| The trigger test inserts one scratch reversal row by raw SQL in `ims_test` | The only way to prove "a reversal cannot be reversed" before Day 4 builds reversals; append-only means it stays, harmlessly |
+
 ## Carry-over
 
 - Day 6 deliverable: diagrams are Mermaid **drafts** (`docs/diagrams/`); final images come on Day 5/6.

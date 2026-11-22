@@ -1,7 +1,7 @@
 import { api } from './client'
 import type {
   AppConfig, CreateUserInput, DashboardData, HistoryRow, MasterDataInput, MasterDataRow, MasterKind, Me, Option,
-  PagedResult, UpdateUserInput, UserRow,
+  HistoryFilterOptions, PagedResult, TrackInput, UnitLookup, UpdateUserInput, UserRow,
 } from './types'
 
 // One small function per API call. Components never build URLs themselves.
@@ -21,8 +21,20 @@ export const authApi = {
 export const configApi = { get: () => api.get<AppConfig>('/api/config') }
 export const dashboardApi = { get: () => api.get<DashboardData>('/api/dashboard') }
 export const historyApi = {
-  list: (page: number, pageSize: number) =>
-    api.get<PagedResult<HistoryRow>>(`/api/history?page=${page}&pageSize=${pageSize}`),
+  list: (query: string) => api.get<PagedResult<HistoryRow>>(`/api/history?${query}`),
+  filterOptions: () => api.get<HistoryFilterOptions>('/api/history/filter-options'),
+}
+
+export const unitsApi = {
+  lookup: (barcode: string) => api.get<UnitLookup>(`/api/units/lookup?barcode=${encodeURIComponent(barcode)}`),
+}
+
+// The three scan operations. Each answers with the unit's updated state.
+export const opsApi = {
+  track: (body: TrackInput) => api.post<UnitLookup>('/api/ops/track', body),
+  receive: (body: { barcode: string; productId?: number; receivePointId: number }) =>
+    api.post<UnitLookup>('/api/ops/receive', body),
+  deliver: (body: { barcode: string; deliveryPointId: number }) => api.post<UnitLookup>('/api/ops/deliver', body),
 }
 
 // Products, components and points share the same URL shape: /api/<kind>, /api/<kind>/{id}, ...

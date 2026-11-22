@@ -7,30 +7,6 @@ namespace Ims.Api.Controllers;
 // Every endpoint of the API contract exists from Day 1 with its REAL authorization policy.
 // Behaviour is added on the day named in the 501 message. (Stub honesty: a 501 is never a fake success.)
 
-[Route("api/units")]
-public class UnitsController : ApiControllerBase
-{
-    [Authorize(Policy = Capabilities.OpsLookup)]
-    [HttpGet("lookup")]
-    public IActionResult Lookup([FromQuery] string? barcode) => NotBuilt(3);
-}
-
-[Route("api/ops")]
-public class OpsController : ApiControllerBase
-{
-    [Authorize(Policy = Capabilities.OpsTrack)]
-    [HttpPost("track")]
-    public IActionResult Track() => NotBuilt(3);
-
-    [Authorize(Policy = Capabilities.OpsReceive)]
-    [HttpPost("receive")]
-    public IActionResult Receive() => NotBuilt(3);
-
-    [Authorize(Policy = Capabilities.OpsDeliver)]
-    [HttpPost("deliver")]
-    public IActionResult Deliver() => NotBuilt(3);
-}
-
 [Route("api/reports")]
 [Authorize(Policy = Capabilities.ReportsView)]
 public class ReportsController : ApiControllerBase

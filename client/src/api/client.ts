@@ -7,15 +7,24 @@ export class ApiError extends Error {
   title: string
   detail?: string
   code?: string
+  /** ProblemDetails "type": a duplicate-scan warning has type "duplicate-scan" (HTTP 409). */
+  type?: string
+  /** Extra ProblemDetails members, e.g. { when, where, by } of a duplicate-scan warning. */
+  extras: Record<string, unknown>
   fieldErrors: Record<string, string[]>
 
-  constructor(init: { status: number; title: string; detail?: string; code?: string; fieldErrors?: Record<string, string[]> }) {
+  constructor(init: {
+    status: number; title: string; detail?: string; code?: string; type?: string
+    extras?: Record<string, unknown>; fieldErrors?: Record<string, string[]>
+  }) {
     super(init.detail ?? init.title)
     this.name = 'ApiError'
     this.status = init.status
     this.title = init.title
     this.detail = init.detail
     this.code = init.code
+    this.type = init.type
+    this.extras = init.extras ?? {}
     this.fieldErrors = init.fieldErrors ?? {}
   }
 }
@@ -28,6 +37,8 @@ export function toApiError(status: number, body: unknown): ApiError {
     title: typeof b.title === 'string' ? b.title : `Request failed (${status})`,
     detail: typeof b.detail === 'string' ? b.detail : undefined,
     code: typeof b.code === 'string' ? b.code : undefined,
+    type: typeof b.type === 'string' ? b.type : undefined,
+    extras: { when: b.when, where: b.where, by: b.by },
     fieldErrors: (b.errors && typeof b.errors === 'object' ? b.errors : {}) as Record<string, string[]>,
   })
 }

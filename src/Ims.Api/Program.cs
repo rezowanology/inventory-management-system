@@ -88,6 +88,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 
 // ---- Our own services (scoped = one instance per HTTP request) ----
+builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddScoped<InventoryService>();
 builder.Services.AddScoped<MasterDataService>(); // products / components / points
 builder.Services.AddScoped<UserAdminService>();  // user administration via UserManager

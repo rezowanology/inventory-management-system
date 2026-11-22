@@ -16,7 +16,9 @@ export function applyServerErrors<T extends FieldValues>(
 
   let placed = 0
   for (const [key, messages] of Object.entries(error.fieldErrors)) {
-    const field = fields.find((f) => f === key.charAt(0).toLowerCase() + key.slice(1))
+    // "Name" -> "name"; "components[0].componentBarcode" -> "components.0.componentBarcode" (react-hook-form path syntax).
+    const path = (key.charAt(0).toLowerCase() + key.slice(1)).replace(/\[(\d+)\]/g, '.$1')
+    const field = fields.find((f) => f === path)
     if (field && messages.length > 0) {
       setError(field, { type: 'server', message: messages[0] })
       placed++
