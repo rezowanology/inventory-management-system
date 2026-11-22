@@ -67,7 +67,7 @@ public class AuthFlowTests(ImsApiFactory factory)
 
         var login = await ApiTestHelpers.LoginAsync(client, "newbie" + suffix, "Newbie@12345");
         Assert.Equal(HttpStatusCode.Forbidden, login.StatusCode);
-        Assert.Equal("Account inactive", (await Json(login)).GetProperty("title").GetString());
+        Assert.Equal("This account is not active", (await Json(login)).GetProperty("title").GetString());
     }
 
     [Fact]

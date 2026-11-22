@@ -38,3 +38,55 @@ export interface DashboardData {
 export interface AppConfig {
   timeZone: string
 }
+
+export type Role = 'ADMIN' | 'COMPONENT_TRACKER' | 'RECEIVE_USER' | 'DELIVERY_USER' | 'REPORT_VIEWER'
+export type PointType = 'TRACK' | 'RECEIVE' | 'DELIVERY'
+export type MasterKind = 'products' | 'components' | 'points'
+
+export interface MasterDataRow {
+  id: number
+  name: string
+  isDeleted: boolean
+  deletedAt: string | null
+  createdAt: string
+  updatedAt: string
+  pointType: PointType | null
+}
+
+export interface MasterDataInput {
+  name: string
+  type?: PointType
+}
+
+export interface Option {
+  id: number
+  name: string
+}
+
+export interface UserRow {
+  id: number
+  userName: string
+  firstName: string
+  lastName: string
+  employeeNo: string
+  role: Role
+  isActive: boolean
+  lastLoginAt: string | null
+  isPending: boolean
+}
+
+export interface CreateUserInput {
+  userName: string
+  firstName: string
+  lastName: string
+  employeeNo: string
+  role: Role
+  password: string
+}
+
+export interface UpdateUserInput {
+  firstName: string
+  lastName: string
+  employeeNo: string
+  role: Role
+}

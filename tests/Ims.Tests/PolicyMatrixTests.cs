@@ -24,7 +24,7 @@ public class PolicyMatrixTests(ImsApiFactory factory)
             .Where(e => e.RoutePattern.RawText!.StartsWith("api/"))
             .SelectMany(e =>
             {
-                var url = "/" + System.Text.RegularExpressions.Regex.Replace(e.RoutePattern.RawText!, @"\{id[^}]*\}", "1");
+                var url = "/" + System.Text.RegularExpressions.Regex.Replace(e.RoutePattern.RawText!, @"\{id[^}]*\}", "999999999"); // an id that does not exist: allowed roles get 404, and nothing real is changed
                 var policy = e.Metadata.GetOrderedMetadata<IAuthorizeData>().Select(a => a.Policy).FirstOrDefault(p => p != null);
                 var anon = e.Metadata.GetMetadata<IAllowAnonymous>() != null;
                 var methods = e.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods ?? [];

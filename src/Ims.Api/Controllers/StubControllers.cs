@@ -40,34 +40,6 @@ public class ReportsController : ApiControllerBase
     [HttpGet("barcode")] public IActionResult Barcode() => NotBuilt(4);
 }
 
-/// <summary>Shared shape of the three master-data controllers (products, components, points).</summary>
-[Authorize(Policy = Capabilities.MasterDataManage)]
-public abstract class MasterDataStubController : ApiControllerBase
-{
-    [HttpGet] public IActionResult List() => NotBuilt(2);
-    [HttpGet("{id:long}")] public IActionResult Get(long id) => NotBuilt(2);
-    [HttpPost] public IActionResult Create() => NotBuilt(2);
-    [HttpPut("{id:long}")] public IActionResult Update(long id) => NotBuilt(2);
-    [HttpDelete("{id:long}")] public IActionResult Delete(long id) => NotBuilt(2);
-    [HttpPost("{id:long}/restore")] public IActionResult Restore(long id) => NotBuilt(2);
-}
-
-[Route("api/products")] public class ProductsController : MasterDataStubController { }
-[Route("api/components")] public class ComponentsController : MasterDataStubController { }
-[Route("api/points")] public class PointsController : MasterDataStubController { }
-
-[Route("api/users")]
-[Authorize(Policy = Capabilities.UsersManage)]
-public class UsersController : ApiControllerBase
-{
-    [HttpGet] public IActionResult List() => NotBuilt(2);
-    [HttpGet("{id:long}")] public IActionResult Get(long id) => NotBuilt(2);
-    [HttpPost] public IActionResult Create() => NotBuilt(2);
-    [HttpPut("{id:long}")] public IActionResult Update(long id) => NotBuilt(2);
-    [HttpPost("{id:long}/toggle-active")] public IActionResult ToggleActive(long id) => NotBuilt(2);
-    [HttpPost("{id:long}/reset-password")] public IActionResult ResetPassword(long id) => NotBuilt(2);
-}
-
 [Route("api/audit")]
 [Authorize(Policy = Capabilities.AuditView)]
 public class AuditController : ApiControllerBase

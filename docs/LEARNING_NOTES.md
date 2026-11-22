@@ -61,3 +61,41 @@ so comparisons to C++ are included where they help.
   body into an `ApiError`.
 - **Vitest.** `*.test.ts(x)` files run in a fake browser (jsdom). `RequireCapability.test.tsx` renders the guard inside a fake
   router and checks the redirect.
+
+## Day 2 - 22 Nov 2026: admin panel and account security
+
+### .NET
+
+- **DTOs vs entities.** Entities (`Domain/MasterData.cs`) mirror database tables; DTOs (`Contracts/AdminDtos.cs`) are the JSON shapes
+  we promise to clients. We never send an entity, so a new column (like a password hash) can never leak by accident.
+- **Model binding + DataAnnotations.** In `MasterDataControllers.cs` a parameter such as `MasterDataRequest request` is filled from the
+  JSON body, and `[Required]`/`[StringLength]` on the record are checked by `[ApiController]` before the action runs; a bad body is
+  answered with 400 and a field-error list. `[FromQuery] ListQuery query` does the same for `?q=&page=`.
+- **One list contract.** `Infrastructure/ListQuery.cs` holds the common query parameters and `PagedResult<T>.CreateAsync` runs
+  COUNT + OFFSET/LIMIT. Every list (products, users, ...) reuses it, so paging is written once.
+- **Generics.** `MasterDataController<T>` and `MasterDataService.ListAsync<T>` work for any table that inherits `MasterDataEntity`;
+  the three concrete controllers only add a URL.
+- **ProblemDetails.** Business-rule errors are thrown as `DomainException` and `Infrastructure/ApiExceptionHandler.cs` turns them
+  into one standard JSON error (RFC 7807) with an optional `errors` map that React puts under the right input.
+- **UserManager and security stamps.** `Services/UserAdminService.cs` creates users, hashes passwords and validates them via
+  `UserManager`. The *security stamp* is a random value stored in the user row and in the sign-in cookie; changing it
+  (`UpdateSecurityStampAsync`) makes every old cookie invalid. With `ValidationInterval = Zero` (`Program.cs`) the stamp is checked on
+  every request, so a deactivated user gets 401 immediately.
+- **EF Core translations.** `EF.Functions.ILike` gives case-insensitive search in PostgreSQL; `x.Name.ToLower() == lower` becomes
+  `lower(name) = ...`, matching the partial unique index from Day 1.
+- **Migrations.** `dotnet ef migrations add AddUserLastLogin` generated `Data/Migrations/*_AddUserLastLogin.cs` from the change to
+  `ApplicationUser`.
+
+### React
+
+- **Controlled forms.** `pages/manage/MasterDataForm.tsx` uses react-hook-form (`register`, `handleSubmit`, `formState.errors`) with a
+  zod schema as resolver. `lib/serverErrors.ts` copies the server's field errors into the form with `setError`.
+- **useMutation + invalidateQueries.** In `MasterDataPage.tsx`, `useMutation` sends the change; on success
+  `queryClient.invalidateQueries({ queryKey: ['master', kind] })` marks the cached lists out of date so they reload.
+- **URL search params as state.** `hooks/useListParams.ts` reads and writes `?q=&page=&status=` through React Router, so Back, refresh
+  and copied links keep the list exactly as it was.
+- **Reusable components.** `DataTable`, `ListToolbar`, `Pagination`, `ConfirmDialog` and `Modal` in `src/components/` are used by every
+  admin list; a page only describes its columns.
+- **A global 401 handler.** `api/client.ts` calls the handler registered by `AuthProvider`; `Layout.tsx` also asks `/api/auth/me` on
+  every page change, so a deactivated user lands on the login page with "Your session has ended".
+

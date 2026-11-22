@@ -70,6 +70,10 @@ namespace Ims.Api.Data.Migrations
                         .HasDefaultValue(false)
                         .HasColumnName("is_active");
 
+                    b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_login_at");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .ValueGeneratedOnAdd()

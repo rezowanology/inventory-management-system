@@ -4,6 +4,10 @@ import { RequireAuth } from './auth/RequireAuth'
 import { RequireCapability } from './auth/RequireCapability'
 import { Layout } from './components/Layout'
 import { CAP } from './lib/capabilities'
+import { ChangePasswordPage } from './pages/ChangePasswordPage'
+import { MASTER_KINDS } from './pages/manage/constants'
+import { MasterDataPage } from './pages/manage/MasterDataPage'
+import { UsersPage } from './pages/manage/UsersPage'
 import { ForbiddenPage } from './pages/ForbiddenPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { HomePage } from './pages/HomePage'
@@ -27,7 +31,7 @@ export function App() {
       <Route element={<RequireAuth><Layout /></RequireAuth>}>
         <Route path="/" element={<HomePage />} />
         <Route path="/forbidden" element={<ForbiddenPage />} />
-        <Route path="/change-password" element={guarded(CAP.changePassword, <StubPage title="Change password" day={2} />)} />
+        <Route path="/change-password" element={guarded(CAP.changePassword, <ChangePasswordPage />)} />
 
         <Route path="/ops/track" element={guarded(CAP.opsTrack, <StubPage title="Track components" day={3} />)} />
         <Route path="/ops/receive" element={guarded(CAP.opsReceive, <StubPage title="Receive units" day={3} />)} />
@@ -40,10 +44,10 @@ export function App() {
         <Route path="/reports/summary" element={guarded(CAP.reportsView, <StubPage title="Summary report" day={4} />)} />
         <Route path="/reports/barcode" element={guarded(CAP.reportsView, <StubPage title="Barcode history" day={4} />)} />
 
-        <Route path="/manage/products" element={guarded(CAP.masterData, <StubPage title="Products" day={2} />)} />
-        <Route path="/manage/components" element={guarded(CAP.masterData, <StubPage title="Components" day={2} />)} />
-        <Route path="/manage/points" element={guarded(CAP.masterData, <StubPage title="Points" day={2} />)} />
-        <Route path="/manage/users" element={guarded(CAP.users, <StubPage title="Users" day={2} />)} />
+        <Route path="/manage/products" element={guarded(CAP.masterData, <MasterDataPage config={MASTER_KINDS.products} />)} />
+        <Route path="/manage/components" element={guarded(CAP.masterData, <MasterDataPage config={MASTER_KINDS.components} />)} />
+        <Route path="/manage/points" element={guarded(CAP.masterData, <MasterDataPage config={MASTER_KINDS.points} />)} />
+        <Route path="/manage/users" element={guarded(CAP.users, <UsersPage />)} />
         <Route path="/audit" element={guarded(CAP.audit, <StubPage title="Audit log" day={5} />)} />
 
         <Route path="*" element={<ForbiddenPage />} />

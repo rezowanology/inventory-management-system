@@ -44,10 +44,12 @@ public class AuthController(
             return Problem(statusCode: 401, title: "Invalid user name or password");
 
         if (!user.IsActive)
-            return Problem(statusCode: 403, title: "Account inactive",
-                detail: "Your account is inactive. Ask an Admin to activate it.");
+            return Problem(statusCode: 403, title: "This account is not active",
+                detail: "This account is not active. Ask an Admin to activate it.");
 
         await signIn.SignInAsync(user, isPersistent: false); // writes the auth cookie
+        user.LastLoginAt = DateTime.UtcNow; // lets the admin list tell "pending registration" from "deactivated"
+        await users.UpdateAsync(user);
         return Ok(ToMe(user));
     }
 
@@ -99,9 +101,38 @@ public class AuthController(
         return user is null ? Unauthorized() : Ok(ToMe(user));
     }
 
+    /// <summary>
+    /// Every role may change their OWN password. ChangePasswordAsync checks the current password, validates and
+    /// hashes the new one and renews the security stamp (which invalidates the old cookie), so we sign the user
+    /// in again with RefreshSignInAsync to hand out a fresh cookie.
+    /// </summary>
     [Authorize(Policy = Capabilities.ChangePassword)]
     [HttpPost("change-password")]
-    public IActionResult ChangePassword() => NotBuilt(2);
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
+    {
+        var user = await users.GetUserAsync(User);
+        if (user is null) return Unauthorized();
+
+        if (request.NewPassword != request.ConfirmPassword)
+            return Field("confirmPassword", "The two new passwords do not match.");
+        if (request.NewPassword == request.CurrentPassword)
+            return Field("newPassword", "The new password must be different from the current one.");
+
+        var result = await users.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+        if (!result.Succeeded)
+        {
+            var errors = result.Errors
+                .GroupBy(e => e.Code == "PasswordMismatch" ? "currentPassword" : "newPassword")
+                .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray());
+            return ValidationProblem(new ValidationProblemDetails(errors));
+        }
+
+        await signIn.RefreshSignInAsync(user);
+        return Ok(new { message = "Your password was changed." });
+    }
+
+    private IActionResult Field(string field, string message) =>
+        ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]> { [field] = [message] }));
 
     private static MeResponse ToMe(ApplicationUser u) =>
         new(u.Id, u.UserName ?? "", u.DisplayName, u.Role.ToString(), u.EmployeeNo, Capabilities.ForRole(u.Role).ToList());

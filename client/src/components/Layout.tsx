@@ -1,4 +1,6 @@
-import { Link, Outlet, useNavigate } from 'react-router'
+import { useEffect } from 'react'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router'
+import { authApi } from '../api/endpoints'
 import { useAuth } from '../auth/auth-context'
 import { CAP, can } from '../lib/capabilities'
 
@@ -33,6 +35,15 @@ const MENU: MenuGroup[] = [
 export function Layout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // On every page change ask the server "is my session still valid?". If an Admin deactivated this account,
+  // the answer is 401 and the API client sends us to /login with "Your session has ended" (rule R12).
+  // Pages that load data notice this by themselves; this check also covers pages that load nothing.
+  useEffect(() => {
+    authApi.checkSession().catch(() => { /* a 401 is handled centrally; other errors are ignored here */ })
+  }, [location.pathname])
+
   if (!user) return null
 
   async function handleLogout() {

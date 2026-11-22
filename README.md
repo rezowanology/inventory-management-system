@@ -4,9 +4,9 @@ A barcode-based inventory system that follows one physical unit from **component
 It has five roles (one per user, enforced on the server), an append-only inventory history, admin-only reversals,
 reports, CSV/Excel export, an audit log and a dashboard. This is an industrial-attachment learning/demo project.
 
-**Status: Day 1 of 6 — running skeleton.** Login, the full database schema, all routes and endpoints (most are
-stubs that say which day builds them), the seeded sample record, `/history` and the dashboard numbers work.
-Operations, admin screens, reversals, reports, audit log and export arrive on Days 2-5.
+**Status: Day 2 of 6 - admin panel done.** Login, the full database schema, the seeded sample record, `/history`, the
+dashboard numbers, the **admin panel** (products, components, points, users), password change and forced logout work.
+Operations, reversals, reports, audit log and export arrive on Days 3-5 (their screens and endpoints exist as stubs).
 
 ## Stack and why
 
@@ -99,6 +99,25 @@ dotnet ef database drop --force --project src/Ims.Api
 dotnet ef database update --project src/Ims.Api
 dotnet run --project src/Ims.Api -- seed
 ```
+
+## Admin panel (Day 2)
+
+Sign in as `admin`. The **Admin** menu has Products, Components, Points and Users; every role has **Change password** in the
+user menu (top right).
+
+- **Master data** (`/manage/products`, `/manage/components`, `/manage/points`): search, a status filter (Active / Archived / All),
+  a type filter for points, paging, create, edit, delete and restore. Names are unique ignoring upper/lower case and
+  surrounding spaces (points: per type). **Delete** asks for confirmation: if the row is used by a unit or history it is
+  *archived* (hidden from dropdowns, still shown in history, restorable); otherwise it is removed for good.
+- **Users** (`/manage/users`): search by user name, name or employee number; filters for role, active/inactive and a
+  **Pending registration** chip (self-registered accounts that are inactive and never signed in); create with one role,
+  edit names / employee number / role, activate / deactivate, reset password. Users are never deleted.
+  You cannot deactivate yourself, and the last active Admin cannot be deactivated or demoted.
+- **Forced logout:** deactivating a user (or resetting their password) invalidates their sign-in cookie. Their next click or API
+  call returns 401 and the app shows the login page with "Your session has ended. Please sign in again."
+- **Lists keep their state in the URL** (`?q=&status=&page=`), so Back, refresh and copied links keep the filters.
+- **Dropdown feed:** `GET /api/<products|components|points>/options` returns non-archived rows only (also for the operational roles).
+- **Export buttons** are on every list but the API answers 501 until Day 4.
 
 ## Project layout
 

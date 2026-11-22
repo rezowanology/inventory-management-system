@@ -14,5 +14,8 @@ public class ApplicationUser : IdentityUser<long>
     public Role Role { get; set; } = Role.REPORT_VIEWER;
     public bool IsActive { get; set; }
 
+    /// <summary>UTC time of the last successful sign-in; null = never signed in (used for "pending registration").</summary>
+    public DateTime? LastLoginAt { get; set; }
+
     public string DisplayName => $"{FirstName} {LastName}".Trim() is { Length: > 0 } n ? n : UserName ?? "";
 }

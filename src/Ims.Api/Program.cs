@@ -40,6 +40,7 @@ builder.Services
     })
     .AddEntityFrameworkStores<ImsDbContext>()
     .AddSignInManager<ImsSignInManager>()
+    .AddDefaultTokenProviders() // needed by the admin "reset password" flow (one-time reset token)
     .AddClaimsPrincipalFactory<ImsClaimsPrincipalFactory>();
 
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme).AddIdentityCookies();
@@ -88,6 +89,8 @@ builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 
 // ---- Our own services (scoped = one instance per HTTP request) ----
 builder.Services.AddScoped<InventoryService>();
+builder.Services.AddScoped<MasterDataService>(); // products / components / points
+builder.Services.AddScoped<UserAdminService>();  // user administration via UserManager
 
 var app = builder.Build();
 

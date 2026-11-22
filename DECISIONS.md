@@ -41,8 +41,33 @@ Every judgment call: date, decision, reason. The **Carry-over** section at the b
 | `Microsoft.AspNetCore.OpenApi` template package left in | Harmless; remove later if unused |
 | The `check_transaction()` insert-time trigger of the reference SQL is not in the migrations yet | Day 3 adds the DB safety triggers with the operations |
 
+## Day 2 choices (22 Nov 2026)
+
+| Decision | Reason |
+|---|---|
+| **Soft delete rule:** product in use = referenced by a unit; component / point in use = referenced by a history row. In use -> `is_deleted` + `deleted_at` (response `{archived: true}`); not in use -> real DELETE. Deleting an already archived, in-use row is a no-op that still answers `archived: true` | A9/R11. Keeps history readable and restorable |
+| Restore is refused (422 on `name`) if an active row now has the same name; creating a name that only an archived row has is allowed | The unique index only covers non-deleted rows |
+| A point type cannot change once the point is used in history (422 on `type`) | Otherwise old history rows would say TRACK at a delivery point |
+| One shared `MasterDataService` + one generic `MasterDataController<T>` (3 tiny subclasses) for products, components and points | Same columns and rules; avoids three copies. It is not a generic repository |
+| `GET /api/<kind>/options` is protected by `ops.lookup` (not `masterdata.manage`) | Day 3 scan screens of non-admin roles need dropdowns. The Report Viewer still gets 403 |
+| `status` list filter defaults to `active`; `deleted` = archived only; `all` | Admin normally wants active rows and switches to Archived to restore |
+| New column `users.last_login_at` (migration `AddUserLastLogin`), set on each successful login | "Pending registration" = inactive AND never logged in needs a "never logged in" fact; the audit log (Day 5) cannot serve this yet. Note: an admin-created user who is deactivated before ever signing in also shows as pending |
+| **Last-admin protection:** deactivating or changing the role of the only active ADMIN is a 422 (`last-admin`); deactivating yourself is a 422 (`self-deactivate`). Changing your own role is allowed unless you are the last admin | R12 |
+| **Zero-interval stamp validation:** `SecurityStampValidatorOptions.ValidationInterval = Zero` (set on Day 1) plus `UpdateSecurityStampAsync` on deactivation: the cookie is re-checked against the database on every request, so the next call is 401. The role claim is also rebuilt each request, so a role change applies at once. Password reset and change also renew the stamp | R12 |
+| Admin password reset uses Identity's reset-token flow, so `AddDefaultTokenProviders()` was added | Gets the normal password validators; the old password is never returned |
+| The user name cannot be edited after creation | It is the login name; avoids surprises in audit and history |
+| Login with an inactive account answers 403 with the title "This account is not active" (was "Account inactive") | Wording required by the Day 2 brief; the password is still checked first |
+| `role` is `Role?` + `[Required]` in the create/update user requests | A missing role would otherwise become ADMIN (the enum zero value) |
+| Dialogs are our own React modal (`Modal.tsx`), not Bootstrap's JavaScript modal | Fewer moving parts; testable |
+| Layout re-checks the session (`GET /api/auth/me`) on every route change | A forced logout shows on the very next click even on screens that load no data |
+| `?format=csv` or `xlsx` on lists returns 501 (`NotBuilt(4)`), and the Export buttons show that message | Day 1 rule: stubs never fake success. The real export is Day 4 |
+| Policy test now uses a non-existent id (`999999999`) in place of `{id}` | Allowed roles used to really execute DELETE/toggle-active on row 1; now they get 404 and nothing changes |
+| Vitest setup now unmounts components after each test | Without globals React Testing Library does not clean up by itself |
+| Master-data and user changes are NOT written to `audit_log` yet | `AuditInterceptor` is Day 5 work (the plan puts the audit log there); R13 is completed then |
+
 ## Carry-over
 
 - Day 6 deliverable: diagrams are Mermaid **drafts** (`docs/diagrams/`); final images come on Day 5/6.
 - The README screenshots and user guide are Day 6.
 - A proper 404 page for unknown client routes (minor).
+- Day 5: write master-data and user changes (old/new values) and login/logout events to `audit_log` (R13), including the Day 2 admin actions.
