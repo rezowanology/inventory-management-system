@@ -1,0 +1,53 @@
+import type { ReactNode } from 'react'
+import { Route, Routes } from 'react-router'
+import { RequireAuth } from './auth/RequireAuth'
+import { RequireCapability } from './auth/RequireCapability'
+import { Layout } from './components/Layout'
+import { CAP } from './lib/capabilities'
+import { ForbiddenPage } from './pages/ForbiddenPage'
+import { HistoryPage } from './pages/HistoryPage'
+import { HomePage } from './pages/HomePage'
+import { LoginPage } from './pages/LoginPage'
+import { RegisterPage } from './pages/RegisterPage'
+import { StubPage } from './pages/StubPage'
+
+/** A route that needs a capability. The guard shows /forbidden when the server did not grant it. */
+function guarded(capability: string, element: ReactNode) {
+  return <RequireCapability capability={capability}>{element}</RequireCapability>
+}
+
+// Every route of the app. Stubs say which day builds them; they already sit behind the real guard.
+export function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+
+      {/* Everything below needs a signed-in user and gets the navbar layout. */}
+      <Route element={<RequireAuth><Layout /></RequireAuth>}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/forbidden" element={<ForbiddenPage />} />
+        <Route path="/change-password" element={guarded(CAP.changePassword, <StubPage title="Change password" day={2} />)} />
+
+        <Route path="/ops/track" element={guarded(CAP.opsTrack, <StubPage title="Track components" day={3} />)} />
+        <Route path="/ops/receive" element={guarded(CAP.opsReceive, <StubPage title="Receive units" day={3} />)} />
+        <Route path="/ops/deliver" element={guarded(CAP.opsDeliver, <StubPage title="Deliver units" day={3} />)} />
+
+        <Route path="/history" element={guarded(CAP.historyView, <HistoryPage />)} />
+        <Route path="/history/:id/reverse" element={guarded(CAP.historyReverse, <StubPage title="Reverse a history row" day={4} />)} />
+
+        <Route path="/reports/stock" element={guarded(CAP.reportsView, <StubPage title="Stock report" day={4} />)} />
+        <Route path="/reports/summary" element={guarded(CAP.reportsView, <StubPage title="Summary report" day={4} />)} />
+        <Route path="/reports/barcode" element={guarded(CAP.reportsView, <StubPage title="Barcode history" day={4} />)} />
+
+        <Route path="/manage/products" element={guarded(CAP.masterData, <StubPage title="Products" day={2} />)} />
+        <Route path="/manage/components" element={guarded(CAP.masterData, <StubPage title="Components" day={2} />)} />
+        <Route path="/manage/points" element={guarded(CAP.masterData, <StubPage title="Points" day={2} />)} />
+        <Route path="/manage/users" element={guarded(CAP.users, <StubPage title="Users" day={2} />)} />
+        <Route path="/audit" element={guarded(CAP.audit, <StubPage title="Audit log" day={5} />)} />
+
+        <Route path="*" element={<ForbiddenPage />} />
+      </Route>
+    </Routes>
+  )
+}
