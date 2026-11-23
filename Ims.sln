@@ -11,6 +11,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ims.Tests", "tests\Ims.Tests\Ims.Tests.csproj", "{AB69463C-7B03-494C-8498-C781533E25B8}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{07C2787E-EAC7-C090-1BA3-A61EC2A24D84}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ims.DocTools", "tools\Ims.DocTools\Ims.DocTools.csproj", "{CF3E6915-6042-4E7F-B0D2-8A01C9823615}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,6 +49,18 @@ Global
 		{AB69463C-7B03-494C-8498-C781533E25B8}.Release|x64.Build.0 = Release|Any CPU
 		{AB69463C-7B03-494C-8498-C781533E25B8}.Release|x86.ActiveCfg = Release|Any CPU
 		{AB69463C-7B03-494C-8498-C781533E25B8}.Release|x86.Build.0 = Release|Any CPU
+		{CF3E6915-6042-4E7F-B0D2-8A01C9823615}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CF3E6915-6042-4E7F-B0D2-8A01C9823615}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CF3E6915-6042-4E7F-B0D2-8A01C9823615}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{CF3E6915-6042-4E7F-B0D2-8A01C9823615}.Debug|x64.Build.0 = Debug|Any CPU
+		{CF3E6915-6042-4E7F-B0D2-8A01C9823615}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CF3E6915-6042-4E7F-B0D2-8A01C9823615}.Debug|x86.Build.0 = Debug|Any CPU
+		{CF3E6915-6042-4E7F-B0D2-8A01C9823615}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CF3E6915-6042-4E7F-B0D2-8A01C9823615}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CF3E6915-6042-4E7F-B0D2-8A01C9823615}.Release|x64.ActiveCfg = Release|Any CPU
+		{CF3E6915-6042-4E7F-B0D2-8A01C9823615}.Release|x64.Build.0 = Release|Any CPU
+		{CF3E6915-6042-4E7F-B0D2-8A01C9823615}.Release|x86.ActiveCfg = Release|Any CPU
+		{CF3E6915-6042-4E7F-B0D2-8A01C9823615}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -52,5 +68,6 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{6DE48E82-49D5-4E32-868F-BD41FBD1D171} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{AB69463C-7B03-494C-8498-C781533E25B8} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{CF3E6915-6042-4E7F-B0D2-8A01C9823615} = {07C2787E-EAC7-C090-1BA3-A61EC2A24D84}
 	EndGlobalSection
 EndGlobal

@@ -151,9 +151,25 @@ Every judgment call: date, decision, reason. The **Carry-over** section at the b
 All lists use `ListQuery` / `PagedResult`, `useListParams` (state in the URL), `ListToolbar`, `Pagination` and `ExportButtons`.
 No gaps were found other than the barcode-timeline event filter, which was added today.
 
+## Day 6 choices (23 Nov 2026)
+
+| Decision | Reason |
+|---|---|
+| **Playwright uses the installed Microsoft Edge** (`channel: 'msedge'`), no `playwright install chromium` download | Edge is already on the machine; avoids a ~150 MB browser download. Specs live in `client/e2e/`; Vitest excludes that folder |
+| E2E specs run against **demo mode** on :5080 with the real database `ims` and create their own uniquely named units (`SMK...`, `SHOT...`) | The brief asks for demo-mode screenshots; no cleanup needed because barcodes are unique per run |
+| Added `ui-matrix.spec.ts`: 5 roles x 15 routes in the browser | The brief asks for the policy matrix "API and UI"; the API side is `PolicyMatrixTests` |
+| `render-diagrams.ts` loads Mermaid 11.4.1 from a pinned jsDelivr URL and fails if a diagram has a syntax error | It also proved that both Mermaid files are valid (they rendered on the first run). PNG + PDF are committed so the reviewer needs no internet |
+| `test-cases.csv` is **generated from real test results** (xUnit trx, Vitest json, Playwright json): a case is Pass only if every test it names ran and passed | "Report test results honestly": no result is typed by hand. The generator script was a one-off helper and is not part of the repository; re-running the suites and rebuilding the sheet with `Ims.DocTools` reproduces it |
+| 97 cases, 96 Pass, **1 Not run**: opening the export in desktop Excel (owner: Rezowan) | It needs desktop Excel, which could not be driven here. The automated tests open the same files with ClosedXML |
+| No separate "manual" cases: every other case is covered by an automated run | Each UI role was driven by Playwright; nothing was claimed from memory |
+| `tools/Ims.DocTools` added to `Ims.sln`; `dotnet restore` prints NU1900 (cannot reach nuget.org for vulnerability data) when offline | A network warning, not a code warning. With internet `dotnet build -warnaserror` is clean (0 warnings, 0 errors) |
+| **Fresh-clone check** (see PROGRESS.md): done in a temporary folder with the same user-secret store, so the database part reuses `ims` / `ims_test` | Creating a separate `ims_fresh` database needs the database password, which the assistant must not handle (CLAUDE.md rule 1). Everything else (clone, build, npm ci, tests, both run modes) was executed |
+| `Console.WriteLine` in the seeder and `console.log` in `render-diagrams.ts` are kept | They are the intended command-line output of those two tools, not debug leftovers |
+| `.gitignore` already covers bin/, obj/, node_modules/, `src/Ims.Api/wwwroot/`, test-results/ and playwright-report/ | Checked with `git ls-files`: no build output is tracked |
+
 ## Carry-over
 
-- Day 6 deliverable: diagrams are Mermaid **drafts** (`docs/diagrams/`); final images come on Day 5/6.
-- The README screenshots and user guide are Day 6.
-- A proper 404 page for unknown client routes (minor).
-- Day 5 (done): audit log. Remaining: the user must run `scripts/export-sql.ps1` once to create `docs/db/inventory_with_sample_data.sql`.
+- None that blocks submission.
+- Minor: a proper 404 page for unknown client routes (they show the Forbidden page today).
+- Open manual check: open an exported `.xlsx` and `.csv` in desktop Excel (test case TC-097, owner Rezowan).
+- Questions for the mentor (CLAUDE.md section 9: registration approval, audit access, re-receiving a delivered unit, time zone).

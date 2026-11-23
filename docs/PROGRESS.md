@@ -37,3 +37,9 @@
 - **Not done:** `docs/db/inventory_with_sample_data.sql` - the script that makes it reads the database password, which the assistant was not allowed to run. Run `powershell -ExecutionPolicy Bypass -File scripts/export-sql.ps1 -Verify` once (API stopped), then commit the file.
 - **Next:** Day 6 - QA, test-case sheet, user guide with screenshots, diagram images, demo script and slides, v1.0.0.
 - **Risk:** the diagrams are Mermaid text (render check not done in a Mermaid viewer); demo data now lives in the `ims` database.
+
+## Day 6 - 23 Nov 2026 (QA and submission)
+- **Done:** 7 Playwright specs (sample flow through the UI, 5-role x 15-route UI matrix, 35 screenshots of every module), diagram PNG/PDF rendered, 97-case executed test sheet (.csv + .xlsx via `tools/Ims.DocTools`), user guide with all screenshots, final README, demo script + Marp slides, `docs/SUBMISSION.md`.
+- **Tests:** `dotnet build -warnaserror` clean; 114 .NET, 39 Vitest, 7 Playwright all passing; test sheet 96 Pass / 0 Fail / 1 Not run.
+- **Not done / for you:** open an export in desktop Excel (case TC-097); rehearse the demo once with a timer; the `ims_fresh` database variant of the fresh-clone check (needs the DB password, see DECISIONS.md).
+- **Tags:** day-6 and v1.0.0.

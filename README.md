@@ -4,10 +4,39 @@ A barcode-based inventory system that follows one physical unit from **component
 It has five roles (one per user, enforced on the server), an append-only inventory history, admin-only reversals,
 reports, CSV/Excel export, an audit log and a dashboard. This is an industrial-attachment learning/demo project.
 
-**Status: Day 5 of 6 - feature complete.** Login, the admin panel, **component tracking, receiving and delivery** (with the
-duplicate-scan warning), a filterable `/history`, **admin reversals**, **three reports** (stock, summary with a chart,
-barcode history), **CSV/Excel export** on every list, the **audit log**, a **dashboard**, password change and forced logout work.
-Day 6 is QA, the test sheet, the user guide and the demo.
+**Status: v1.0.0 (Day 6 of 6) - complete and tested.** 114 .NET tests, 39 Vitest tests and 7 Playwright end-to-end specs pass;
+the executed test-case sheet is in `docs/testing/`.
+
+## What it does (mapped to the assignment brief)
+
+| Brief | Where it is |
+|---|---|
+| **Core 1** Auth: register, login, logout, hashed passwords, one role per user | Identity cookie login; 5 roles; self-registration needs Admin activation |
+| **Core 2** Admin panel: product, component, receive/delivery point CRUD; users and roles | `/manage/*` (soft delete for used rows) |
+| **Core 3** Receive at a receive point | `/ops/receive` |
+| **Core 4** Component tracking (a component barcode belongs to one product only) | `/ops/track` |
+| **Core 5** Delivery of in-stock units only | `/ops/deliver` |
+| **Core 6** Append-only history, status derived | `inventory_transactions` + EF interceptor + database trigger; no status column |
+| **Core 7** Admin reversal with reason (receive only if not delivered; delivery returns to its receive point; component detached) | `/history` -> Reverse |
+| **Core 8** Reports: stock by receive point, date-range summary with graph, barcode-wise history | `/reports/stock`, `/reports/summary`, `/reports/barcode` |
+| **Additional 1** Search, filter, pagination | every list and report |
+| **Additional 2** CSV / Excel export | buttons on every list and report |
+| **Additional 3** Audit log (changes and logins, old/new values) | `/audit` |
+| **Additional 4** Activate / deactivate users, soft delete of used master data | `/manage/users`, `/manage/*` |
+| **Additional 5** Client + server validation, clear errors, duplicate-scan warning | zod + server rules; yellow warning vs red error |
+| **Additional 6** Dashboard | `/` |
+| **Additional 7** Password change, forced logout of deactivated users | user menu; cookie re-checked on every request |
+
+## Architecture
+
+```mermaid
+flowchart LR
+    B["Browser<br/>React 19 SPA (client/)"] -- "fetch /api/... JSON<br/>cookie + X-XSRF-TOKEN" --> A["ASP.NET Core Web API<br/>.NET 10 (src/Ims.Api)<br/>policies, services, EF Core"]
+    A -- "Npgsql / SQL" --> D[("PostgreSQL 17<br/>database ims")]
+    A -. "demo mode: serves the built React app from wwwroot" .-> B
+```
+
+Full diagrams: [process flow](docs/diagrams/process-flow.md) and [ER diagram](docs/diagrams/er-diagram.md) (PNG and PDF next to them).
 
 ## Stack and why
 
@@ -34,9 +63,20 @@ react-chartjs-2 5.3.1 · vitest 5.1.1 · @testing-library/react 16.3.3
 
 ## Prerequisites
 
-.NET SDK 10.0.404, Node.js 26 + npm 11, PostgreSQL 17 running on `localhost:5432`, with a database `ims` and a
-login role `ims_user` (with CREATEDB, because tests create `ims_test`). `docs/planning/scripts/setup-ims-database.ps1`
-creates both and asks you for a password.
+- **.NET 10 SDK** (10.0.404 or newer 10.0.x) and the **dotnet-ef** tool: `dotnet tool install --global dotnet-ef`
+- **Node.js LTS** (26) with npm
+- **PostgreSQL 17** running on `localhost:5432`
+- **Git**
+- Microsoft Edge (only for the Playwright end-to-end tests and screenshots)
+
+### Database setup
+
+You need a database `ims` and a login role `ims_user` (with CREATEDB, because the tests create `ims_test`).
+`docs/planning/scripts/setup-ims-database.ps1` creates both and asks you for a password:
+```powershell
+powershell -ExecutionPolicy Bypass -File docs/planning/scripts/setup-ims-database.ps1
+```
+Then store the connection string as a user-secret (next section). The password is never written to a file.
 
 ## Setup (first time)
 
@@ -51,7 +91,8 @@ creates both and asks you for a password.
    dotnet run --project src/Ims.Api -- seed
    npm ci --prefix client
    ```
-   Seeding is safe to repeat: it never creates duplicates.
+   Seeding is safe to repeat: it never creates duplicates. For a presentation add demo data (25 extra units, reversals,
+   an archived item; deterministic): `dotnet run --project src/Ims.Api -- seed --demo-data`.
 
 ## Seeded logins (demo-only passwords)
 
@@ -88,10 +129,14 @@ Restart the API after rebuilding the client.
 ## Tests
 
 ```powershell
-dotnet test                    # 16 tests against the real ims_test database (dropped and re-created each run)
-npm test --prefix client       # 12 Vitest tests
+dotnet test                         # 114 tests against the real ims_test database (dropped and re-created each run)
+npm test --prefix client            # 39 Vitest tests (components and logic)
+npm run e2e --prefix client         # 7 Playwright specs in demo mode: smoke flow, 5-role UI matrix, screenshots
 ```
-The tests reuse the user-secret's host and password but always switch the database name to `ims_test`.
+The .NET tests reuse the user-secret's host and password but always switch the database name to `ims_test`.
+The Playwright specs need **demo mode running** on <http://localhost:5080> (build the client, start the API, seed first) and use the
+installed Microsoft Edge. `npm run diagrams --prefix client` re-renders the diagram images (needs internet once, for Mermaid).
+The executed test-case sheet is `docs/testing/test-cases.xlsx` (rebuild: `dotnet run --project tools/Ims.DocTools -- test-sheet`).
 
 ## Reset the database
 
@@ -101,7 +146,7 @@ dotnet ef database update --project src/Ims.Api
 dotnet run --project src/Ims.Api -- seed
 ```
 
-## Admin panel (Day 2)
+## Admin panel
 
 Sign in as `admin`. The **Admin** menu has Products, Components, Points and Users; every role has **Change password** in the
 user menu (top right).
@@ -120,7 +165,7 @@ user menu (top right).
 - **Dropdown feed:** `GET /api/<products|components|points>/options` returns non-archived rows only (also for the operational roles).
 - **Export buttons** (CSV and Excel) are on every list, see "Reversals, reports & export" below.
 
-## Operations (Day 3)
+## Operations
 
 The life of one unit: **track components -> receive -> deliver**. Sign in as `tracker`, `receiver` and `deliverer` (see the seeded
 logins). Each screen starts with a barcode box that already has the cursor: scan (a USB scanner types the barcode and presses
@@ -147,7 +192,7 @@ for the browser session.
 API: `GET /api/units/lookup?barcode=`, `POST /api/ops/track | receive | deliver` (each answers with the unit's updated state),
 `GET /api/history` with `eventType, pointId, productId, userId, from, to, q, page, pageSize, sort`.
 
-## Reversals, reports & export (Day 4)
+## Reversals, reports & export
 
 **Reversing a row (Admin only).** On `/history` an admin sees a **Reverse** button on every row that may be reversed (others show a
 greyed button with a tooltip that says why). The screen `/history/:id/reverse` shows the original row, **what will change**
@@ -184,7 +229,7 @@ filterable header row and fitted column widths. Text cells that would start a sp
 API: `GET /api/history/{id}/reverse-preview`, `POST /api/history/{id}/reverse {reason}`, `GET /api/reports/stock | summary | barcode`,
 and `?format=csv|xlsx` on `/api/history`, `/api/reports/*`, `/api/products`, `/api/components`, `/api/points`, `/api/users`.
 
-## Audit log and dashboard (Day 5)
+## Audit log and dashboard
 
 **Audit log** (`/audit`, Admin only). Every create / update / delete of a product, component, point or user is written to
 `audit_log` with the **old and new value of only the properties that changed**, who did it, when, and from which IP address.
@@ -211,14 +256,31 @@ Running it twice adds nothing the second time.
 
 ```
 src/Ims.Api/      ASP.NET Core API: Domain, Data (DbContext, Configurations, Migrations, Seed), Authorization,
-                  Controllers, Services (InventoryService, interceptors), Infrastructure, Contracts
-client/           React app (src/api, auth, components, pages, lib)
+                  Controllers, Services (InventoryService, ReportService, interceptors...), Infrastructure, Contracts
+client/           React app (src/api, auth, components, hooks, pages, lib) + e2e/ (Playwright)
 tests/Ims.Tests/  xUnit integration tests
-docs/             diagrams/, LEARNING_NOTES.md, PROGRESS.md, planning/ (plan, DB design, prompts)
+tools/Ims.DocTools/  builds the .xlsx test sheet from the CSV
+scripts/          export-sql.ps1 (regenerates docs/db/)
+docs/             diagrams/, db/, testing/, user-guide/, demo/, LEARNING_NOTES.md, PROGRESS.md, SUBMISSION.md, planning/
 DECISIONS.md      every judgment call
 ```
 
 ## Documents
 
-[DECISIONS.md](DECISIONS.md) · [docs/LEARNING_NOTES.md](docs/LEARNING_NOTES.md) · [docs/PROGRESS.md](docs/PROGRESS.md) ·
-[docs/diagrams/er-diagram.md](docs/diagrams/er-diagram.md) · [docs/diagrams/process-flow.md](docs/diagrams/process-flow.md)
+| Document | Path |
+|---|---|
+| User guide (screenshots of every module) | [docs/user-guide/USER_GUIDE.md](docs/user-guide/USER_GUIDE.md) |
+| Test-case sheet (executed) | [docs/testing/test-cases.xlsx](docs/testing/test-cases.xlsx) · [CSV](docs/testing/test-cases.csv) |
+| Process flow, ER diagram (Mermaid + PNG + PDF) | [docs/diagrams/](docs/diagrams/) |
+| Database script and dump with sample data | [docs/db/](docs/db/README.md) |
+| Demo script and slides | [docs/demo/DEMO_SCRIPT.md](docs/demo/DEMO_SCRIPT.md) · [docs/demo/slides.md](docs/demo/slides.md) |
+| Submission checklist | [docs/SUBMISSION.md](docs/SUBMISSION.md) |
+| Decisions, learning notes, progress | [DECISIONS.md](DECISIONS.md) · [docs/LEARNING_NOTES.md](docs/LEARNING_NOTES.md) · [docs/PROGRESS.md](docs/PROGRESS.md) |
+
+## Known limitations
+
+- **Demo scale.** Status and reports are computed from the history in C# (hundreds of units, not millions).
+- **Local PostgreSQL.** One database on `localhost`; no hosting, backups or high availability.
+- **No camera scanning.** A USB/HID barcode scanner (it types and presses Enter) or the keyboard is used.
+- **Local HTTP.** Run with the `http` profile (`http://localhost:5080`); no HTTPS certificate is set up.
+- Sign-in cookie only: no token API, no email (password reset is done by an Admin).
