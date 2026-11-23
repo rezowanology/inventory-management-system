@@ -155,3 +155,19 @@ so comparisons to C++ are included where they help.
 - **Refetch vs optimistic update.** After a reversal `ReversePage.tsx` calls `invalidateQueries` for history, units, dashboard and `['reports']`: React Query reloads the truth from the server. We do not guess the new state locally because the rules live on the server.
 - **Plain links for downloads.** `components/ExportButtons.tsx` renders `<a href download>`; `exportUrl()` is a pure function, so a test pins the URL.
 - **Search params as input.** `pages/ops/useOpsPage.ts` reads `?barcode=` once with `useSearchParams` and gives it to `ScanPanel` as its starting text.
+
+## Day 5 - 23 Nov 2026 (audit log, dashboard, demo data, SQL)
+
+**.NET**
+- **EF Core interceptors and the ChangeTracker.** `Services/AuditInterceptor.cs` is a `SaveChangesInterceptor`: EF calls it just before and just after saving. Before saving it walks `context.ChangeTracker.Entries()` (every entity that is Added, Modified or Deleted), compares `OriginalValue` with `CurrentValue` and adds `AuditLog` rows to the same save. A new row's key does not exist before the INSERT, so CREATE rows are added in `SavedChanges`.
+- **IHttpContextAccessor.** The interceptor is created once for the whole app, so it cannot receive the current request in its constructor. `IHttpContextAccessor` (registered with `AddHttpContextAccessor`) gives it `HttpContext.User` (who) and `Connection.RemoteIpAddress` (from where). It is null for the seeder, which is why that row says "system".
+- **System.Text.Json.** Old and new values are collected in a `Dictionary<string, object?>`, turned into text with `JsonSerializer.Serialize` and stored in a PostgreSQL `jsonb` column; `AuditQueryService` reads them back with `JsonSerializer.Deserialize<JsonElement>` so the API sends real JSON, not a string.
+- **Whitelists beat blacklists.** Listing the few properties we WANT to log is safer than listing the secret ones we must hide.
+- **Migration scripts.** `dotnet ef migrations script --idempotent` writes all migrations as one SQL file where every step first checks `__EFMigrationsHistory`, so it can run on an empty or an already migrated database. `pg_dump` is the other half: structure plus data.
+- **Seeding through the real service.** `Data/Seed/DemoDataSeeder.cs` builds an `InventoryService` by hand with a clock we can set (`DemoClock`), so old dates go through the same rules as live scans. `new Random(42)` makes the "random" choices the same every run.
+- **Environment variables.** `Program.cs` reads `IMS_DATABASE` so a script can aim the app at another database name without touching the secret.
+
+**React**
+- **Composing dashboard cards.** `pages/HomePage.tsx` has one small `StatCard` component used six times with different props, and plain Bootstrap tables for the lists. All numbers come from one query (`['dashboard']`).
+- **Conditional rendering by capability.** Buttons come from a list filtered with `can(user, capability)`; the recent-activity card only renders when the server sent rows; a barcode is a `<Link>` only for roles that may open reports. The client never re-encodes the permission matrix.
+- **Expandable table rows.** `pages/AuditPage.tsx` keeps a `Set` of open ids in state and renders an extra `<tr>` under an open row; the old/new values load lazily with a second query only when a row is opened.

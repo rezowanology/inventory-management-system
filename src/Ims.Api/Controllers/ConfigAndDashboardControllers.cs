@@ -18,11 +18,11 @@ public class ConfigController(IConfiguration config) : ApiControllerBase
 }
 
 [Route("api/dashboard")]
-public class DashboardController(ImsDbContext db, InventoryService inventory) : ApiControllerBase
+public class DashboardController(DashboardService dashboard, IAuthorizationService authorization) : ApiControllerBase
 {
-    /// <summary>Day 1 version: total units and current stock count. More tiles come on Day 5.</summary>
+    /// <summary>Read-only for every signed-in role. The recent-activity list is only included for roles with history.view.</summary>
     [Authorize(Policy = Capabilities.Dashboard)]
     [HttpGet]
     public async Task<DashboardResponse> Get(CancellationToken ct) =>
-        new(await db.Units.CountAsync(ct), await inventory.CountInStockAsync(ct));
+        await dashboard.GetMetricsAsync((await authorization.AuthorizeAsync(User, Capabilities.HistoryView)).Succeeded, ct);
 }

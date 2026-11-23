@@ -1,6 +1,7 @@
 using Ims.Api.Authorization;
 using Ims.Api.Contracts;
 using Ims.Api.Domain;
+using Ims.Api.Services;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -13,7 +14,8 @@ namespace Ims.Api.Controllers;
 public class AuthController(
     UserManager<ApplicationUser> users,
     SignInManager<ApplicationUser> signIn,
-    IAntiforgery antiforgery) : ApiControllerBase
+    IAntiforgery antiforgery,
+    AuditWriter audit) : ApiControllerBase
 {
     /// <summary>
     /// Hands the browser an antiforgery token: the cookie ".AspNetCore.Antiforgery" (HttpOnly) is set by the
@@ -41,7 +43,11 @@ public class AuthController(
         var user = await users.FindByNameAsync(request.UserName);
         // Same answer for "no such user" and "wrong password" so attackers cannot probe user names.
         if (user is null || !await users.CheckPasswordAsync(user, request.Password))
+        {
+            // Only the typed user name is recorded, never the password.
+            await audit.WriteAsync("LOGIN_FAILED", user?.Id, "User", user?.Id.ToString() ?? "", request.UserName ?? "");
             return Problem(statusCode: 401, title: "Invalid user name or password");
+        }
 
         if (!user.IsActive)
             return Problem(statusCode: 403, title: "This account is not active",
@@ -50,6 +56,7 @@ public class AuthController(
         await signIn.SignInAsync(user, isPersistent: false); // writes the auth cookie
         user.LastLoginAt = DateTime.UtcNow; // lets the admin list tell "pending registration" from "deactivated"
         await users.UpdateAsync(user);
+        await audit.WriteAsync("LOGIN", user.Id, "User", user.Id.ToString(), user.UserName ?? "");
         return Ok(ToMe(user));
     }
 
@@ -57,7 +64,9 @@ public class AuthController(
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {
+        var who = audit.CurrentUserId is { } id ? await users.FindByIdAsync(id.ToString()) : null;
         await signIn.SignOutAsync();
+        if (who is not null) await audit.WriteAsync("LOGOUT", who.Id, "User", who.Id.ToString(), who.UserName ?? "");
         return NoContent();
     }
 

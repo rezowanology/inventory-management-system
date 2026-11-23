@@ -16,6 +16,8 @@ public class TestAuthHandler(
 {
     public const string SchemeName = "Test";
     public const string RoleHeader = "X-Test-Role";
+    /// <summary>Optional: act as a different user id (a test that needs "not the seeded admin" - nothing may be saved as that user).</summary>
+    public const string UserIdHeader = "X-Test-UserId";
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
@@ -24,7 +26,7 @@ public class TestAuthHandler(
 
         var identity = new ClaimsIdentity(
         [
-            new Claim(ClaimTypes.NameIdentifier, "9999"),
+            new Claim(ClaimTypes.NameIdentifier, Request.Headers.TryGetValue(UserIdHeader, out var uid) ? uid.ToString() : "1"), // default: a REAL user id (the seeded admin, first row of a fresh ims_test): audit rows have a foreign key to users
             new Claim(ClaimTypes.Name, "test-" + role),
             new Claim(ClaimTypes.Role, role.ToString()),
         ], SchemeName);

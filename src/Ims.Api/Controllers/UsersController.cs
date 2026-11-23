@@ -51,6 +51,10 @@ public class UsersController(UserAdminService service, ExportService export, App
     }
 
     [HttpPost("{id:long}/reset-password")]
-    public async Task<IActionResult> ResetPassword(long id, ResetPasswordRequest request) =>
-        await service.ResetPasswordAsync(id, request.NewPassword) ? NoContent() : NotFound();
+    public async Task<IActionResult> ResetPassword(long id, ResetPasswordRequest request)
+    {
+        // Tells the AuditInterceptor to log PASSWORD_RESET (an admin did it) instead of PASSWORD_CHANGE.
+        HttpContext.Items[Services.AuditInterceptor.PasswordActionKey] = "PASSWORD_RESET";
+        return await service.ResetPasswordAsync(id, request.NewPassword) ? NoContent() : NotFound();
+    }
 }

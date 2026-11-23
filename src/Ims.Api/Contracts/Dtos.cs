@@ -18,7 +18,6 @@ public record MeResponse(long Id, string UserName, string DisplayName, string Ro
 
 public record ConfigResponse(string TimeZone);
 
-public record DashboardResponse(int TotalUnits, int StockCount);
 
 /// <summary>
 /// One history row as the list, the reports and the exports show it. The last three values describe the reversal that

@@ -2,7 +2,7 @@ import { api } from './client'
 import type {
   AppConfig, CreateUserInput, DashboardData, HistoryRow, MasterDataInput, MasterDataRow, MasterKind, Me, Option,
   HistoryFilterOptions, PagedResult, TrackInput, UnitLookup, UpdateUserInput, UserRow,
-  BarcodeReport, ReversePreview, ReverseResult, StockReport, SummaryReport,
+  AuditDetail, AuditFilterOptions, AuditRow, BarcodeReport, ReversePreview, ReverseResult, StockReport, SummaryReport,
 } from './types'
 
 // One small function per API call. Components never build URLs themselves.
@@ -64,4 +64,10 @@ export const reportsApi = {
   stock: (query: string) => api.get<StockReport>(`/api/reports/stock?${query}`),
   summary: (query: string) => api.get<SummaryReport>(`/api/reports/summary?${query}`),
   barcode: (barcode: string) => api.get<BarcodeReport>(`/api/reports/barcode?barcode=${encodeURIComponent(barcode)}`),
+}
+
+export const auditApi = {
+  list: (query: string) => api.get<PagedResult<AuditRow>>(`/api/audit?${query}`),
+  get: (id: number) => api.get<AuditDetail>(`/api/audit/${id}`),
+  filterOptions: () => api.get<AuditFilterOptions>('/api/audit/filter-options'),
 }

@@ -29,3 +29,11 @@
 - **Checked in the running app (as admin):** reversed the delivery of a demo unit -> back in stock at its receive point, the success link opens /ops/deliver with the barcode pre-filled; summary 27-30 March shows 1/1/1 with a rendered chart; the Excel download is served with the right content type. Not clicked through as the viewer; viewer rights are covered by API tests.
 - **Next:** Day 5 - audit log, dashboard tiles, demo data, final diagrams, SQL deliverables.
 - **Risk:** the stock report is computed in memory (fine for hundreds of units). The sample record was not reversed in `ims`; a separate demo unit DEMO-UNIT-0001 was used and is still in that database.
+
+## Day 5 - 23 Nov 2026
+- **Works:** audit log (master data + users with old/new values, login / failed login / logout, no password data), the `/audit` screen with side-by-side values, filters and export; a real dashboard (today's counts, stock by receive point, stuck-longest list, recent activity, quick actions per role); `seed --demo-data` (25 units, 3 reversals, 1 archived component); final ER and process-flow diagrams; `docs/db/schema.sql`.
+- **Tests:** 114 .NET tests (16 new: audit rows and values, soft delete/role/deactivate, password events, login events, append-only, 403s, filters, export, dashboard metrics, sample record end to end) and 39 Vitest tests (3 new: dashboard cards and role-based quick actions), all passing.
+- **Checked in the running app (admin):** demo data produced a dashboard with 19 in stock and a stuck list led by DEMO000005 (27 days); renaming a product showed an UPDATE row with old and new name under /audit.
+- **Not done:** `docs/db/inventory_with_sample_data.sql` - the script that makes it reads the database password, which the assistant was not allowed to run. Run `powershell -ExecutionPolicy Bypass -File scripts/export-sql.ps1 -Verify` once (API stopped), then commit the file.
+- **Next:** Day 6 - QA, test-case sheet, user guide with screenshots, diagram images, demo script and slides, v1.0.0.
+- **Risk:** the diagrams are Mermaid text (render check not done in a Mermaid viewer); demo data now lives in the `ims` database.

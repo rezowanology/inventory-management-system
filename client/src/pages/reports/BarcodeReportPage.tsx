@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router'
 import { configApi, reportsApi } from '../../api/endpoints'
@@ -52,6 +53,9 @@ export function BarcodeReportPage() {
   const timeZone = config.data?.timeZone ?? 'UTC'
   const data = report.data
   const unit = data?.unit
+  // The timeline can be narrowed to one kind of event (filtering happens in the browser: a unit has only a handful of rows).
+  const [eventFilter, setEventFilter] = useState('')
+  const timeline = (data?.timeline ?? []).filter((r) => !eventFilter || r.eventType === eventFilter)
 
   return (
     <>
@@ -112,9 +116,17 @@ export function BarcodeReportPage() {
             </div>
           </div>
 
-          <h2 className="h6 text-secondary">All {data.timeline.length} rows, oldest first</h2>
+          <div className="d-flex align-items-center gap-3 mb-2">
+            <h2 className="h6 text-secondary mb-0">
+              {eventFilter ? `${timeline.length} of ${data.timeline.length} rows` : `All ${data.timeline.length} rows`}, oldest first
+            </h2>
+            <select className="form-select form-select-sm w-auto" aria-label="Event filter" value={eventFilter} onChange={(e) => setEventFilter(e.target.value)}>
+              <option value="">All events</option>
+              {Object.keys(EVENT_STYLE).map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
           <ol className="list-unstyled border-start ms-2 ps-2 mt-3">
-            {data.timeline.map((row) => <TimelineItem key={row.id} row={row} timeZone={timeZone} />)}
+            {timeline.map((row) => <TimelineItem key={row.id} row={row} timeZone={timeZone} />)}
           </ol>
           <div className="text-secondary small">Times are shown in {timeZone}. Struck-through rows were reversed by an admin.</div>
         </>

@@ -12,6 +12,7 @@ import { DeliverPage } from './pages/ops/DeliverPage'
 import { ReceivePage } from './pages/ops/ReceivePage'
 import { TrackPage } from './pages/ops/TrackPage'
 import { ForbiddenPage } from './pages/ForbiddenPage'
+import { AuditPage } from './pages/AuditPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { ReversePage } from './pages/history/ReversePage'
 import { BarcodeReportPage } from './pages/reports/BarcodeReportPage'
@@ -20,7 +21,6 @@ import { SummaryReportPage } from './pages/reports/SummaryReportPage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
-import { StubPage } from './pages/StubPage'
 
 /** A route that needs a capability. The guard shows /forbidden when the server did not grant it. */
 function guarded(capability: string, element: ReactNode) {
@@ -55,7 +55,7 @@ export function App() {
         <Route path="/manage/components" element={guarded(CAP.masterData, <MasterDataPage config={MASTER_KINDS.components} />)} />
         <Route path="/manage/points" element={guarded(CAP.masterData, <MasterDataPage config={MASTER_KINDS.points} />)} />
         <Route path="/manage/users" element={guarded(CAP.users, <UsersPage />)} />
-        <Route path="/audit" element={guarded(CAP.audit, <StubPage title="Audit log" day={5} />)} />
+        <Route path="/audit" element={guarded(CAP.audit, <AuditPage />)} />
 
         <Route path="*" element={<ForbiddenPage />} />
       </Route>

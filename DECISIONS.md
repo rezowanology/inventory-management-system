@@ -111,9 +111,49 @@ Every judgment call: date, decision, reason. The **Carry-over** section at the b
 | An old Day 2 test now filters history to the sample unit instead of assuming every row is a Refrigerator | New tests create Freezer / Air Conditioner units in the shared `ims_test` |
 | Manual check used a separate demo unit (`DEMO-UNIT-0001`) and **not** a database reset | The `ims` database may hold the user's own test data; the API tests already prove "reverse a delivery" on throw-away units |
 
+## Day 5 choices (23 Nov 2026)
+
+| Decision | Reason |
+|---|---|
+| `AuditInterceptor` reads a **whitelist** of properties (name, is_deleted, point_type; user name, first/last name, employee no., role, is_active) | Password hash, security stamp, concurrency stamp, Normalized* and the other Identity columns can never reach the log, even by mistake |
+| UPDATE / DELETE audit rows are added in the **same SaveChanges** as the change; **CREATE rows are written in a second small SaveChanges** right after it | A CREATE row needs the generated primary key, which exists only after the INSERT. If the second save failed, the create would be un-audited (very unlikely; accepted at demo scale) |
+| Changed values are found by comparing EF's original and current values | Identity's `UpdateAsync` marks every column modified, so `IsModified` alone would log everything |
+| One action name per row with priority ROLE_CHANGE > ACTIVATE/DEACTIVATE > UPDATE (SOFT_DELETE/RESTORE for master data); the row still holds every changed property | Keeps one change = one row |
+| Password: a changed `PasswordHash` writes a separate PASSWORD_CHANGE row without values; the reset endpoint sets `HttpContext.Items["audit.password-action"]` so it becomes PASSWORD_RESET | The interceptor cannot otherwise tell a self-service change from an admin reset |
+| `LastLoginAt`, lockout counters and timestamps are not audited | Noise: the LOGIN row already says it |
+| LOGIN / LOGIN_FAILED / LOGOUT are written by `AuditWriter` from `AuthController`; LOGIN_FAILED keeps the typed user name only (actor = that user if it exists, else null) | R13; never the password |
+| Audit list search matches entity name, action, entity id and actor user name; detail (old/new values) is a separate call, opened by "Show values" | Keeps the list small |
+| Dashboard: today's receives / deliveries count only rows that are **not reversed**; reversals today are counted separately; "stuck longest" and stock-by-point come from the **same code as the stock report** (`ReportService.StockAsync`) | The tiles can never disagree with the report |
+| `recent` activity is sent only to roles with `history.view`; the stuck-list link to `/reports/barcode` is only a link for `reports.view` | The dashboard is open to all roles but must not leak history |
+| `DashboardResponse` keeps `totalUnits` and `stockCount` and gains the new fields | Existing tests and screens keep working |
+| **Demo data** goes through `InventoryService` with a settable clock (`DemoClock`) instead of writing rows directly | Every rule applies; reversals are real; dates can be in the past. "Today" rows are placed as a fraction of the time elapsed today so they are never in the future |
+| Demo data uses the five seeded users (tracker/receiver/deliverer/admin) | Only those accounts exist; adding fake users would clutter the user list |
+| Demo "Fan Motor" component is created first, used by DEMO000004, then archived with `MasterDataService.DeleteAsync` | In use -> soft delete (R11), so the archive path is the real one |
+| `IMS_DATABASE` environment variable swaps only the database name of the connection string | Lets `scripts/export-sql.ps1` build a throw-away database (`ims_export`) without touching `ims` or putting a secret on a command line |
+| `scripts/export-sql.ps1` dumps a throw-away database instead of resetting `ims` | Your own data in `ims` is never dropped. **The script must be run by the user**: the auto-mode permission check refused to let the assistant run a script that reads the database password from user-secrets |
+| Test identity (`TestAuthHandler`) now acts as user id **1** (the seeded admin) and can be changed with the `X-Test-UserId` header | `audit_log.actor_id` has a foreign key to users; the old fake id 9999 broke it. The last-admin test uses the header so the "cannot deactivate yourself" rule does not interfere |
+| `StubPage` removed | No stub screens are left |
+| Barcode-history timeline filters by event type **in the browser** | A unit has only a handful of rows |
+
+### Search / filter / pagination sweep (checklist)
+
+| List | Search | Filters | Paging | Export |
+|---|---|---|---|---|
+| Products, Components | name | status (active / archived / all) | yes | yes |
+| Points | name | status, type | yes | yes |
+| Users | user name, name, employee no. | role, active, pending | yes | yes |
+| History | barcode, component barcode, product | event, product, point, user, date range | yes | yes |
+| Stock report | barcode, product | product, receive point (chips), minimum days, sort | yes | yes |
+| Summary report | n/a (rows are days) | date range, product, point | yes (per-day table) | yes |
+| Barcode history | the barcode itself | event type (timeline) | n/a (one unit, all rows shown on purpose) | yes |
+| Audit log | entity, action, entity id, actor | user, action, entity type, date range | yes | yes |
+
+All lists use `ListQuery` / `PagedResult`, `useListParams` (state in the URL), `ListToolbar`, `Pagination` and `ExportButtons`.
+No gaps were found other than the barcode-timeline event filter, which was added today.
+
 ## Carry-over
 
 - Day 6 deliverable: diagrams are Mermaid **drafts** (`docs/diagrams/`); final images come on Day 5/6.
 - The README screenshots and user guide are Day 6.
 - A proper 404 page for unknown client routes (minor).
-- Day 5: write master-data and user changes (old/new values) and login/logout events to `audit_log` (R13), including the Day 2 admin actions.
+- Day 5 (done): audit log. Remaining: the user must run `scripts/export-sql.ps1` once to create `docs/db/inventory_with_sample_data.sql`.

@@ -37,10 +37,42 @@ export interface HistoryRow {
   canReverse: boolean
 }
 
+export interface StuckUnit { barcode: string; productName: string; pointName: string; daysInStock: number }
+
 export interface DashboardData {
   totalUnits: number
   stockCount: number
+  todayReceived: number
+  todayDelivered: number
+  todayReversed: number
+  unitsRegisteredToday: number
+  stockByPoint: PointCount[]
+  stuckLongest: StuckUnit[]
+  /** Empty for roles without history access. */
+  recent: HistoryRow[]
 }
+
+// ---- Day 5: audit log ----
+
+export interface AuditRow {
+  id: number
+  createdAt: string
+  actorId: number | null
+  actor: string
+  action: string
+  entityType: string
+  entityId: string
+  entityRepr: string
+  ipAddress: string | null
+  hasValues: boolean
+}
+
+export interface AuditDetail extends Omit<AuditRow, 'hasValues'> {
+  oldValues: Record<string, unknown> | null
+  newValues: Record<string, unknown> | null
+}
+
+export interface AuditFilterOptions { actors: Option[]; actions: string[]; entityTypes: string[] }
 
 export interface AppConfig {
   timeZone: string

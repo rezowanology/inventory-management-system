@@ -346,7 +346,9 @@ public class AdminTests(ImsApiFactory factory)
     [Fact]
     public async Task The_last_active_admin_cannot_be_deactivated_or_demoted()
     {
-        var admin = await AdminAsync(); // test identity: it is not a database user, so the "self" rule cannot interfere
+        var admin = await AdminAsync();
+        admin.DefaultRequestHeaders.Add(TestAuthHandler.UserIdHeader, "99999"); // not a database user, so the "self" rule cannot interfere (every call below is refused, nothing is saved)
+        await ApiTestHelpers.RefreshCsrfAsync(admin); // the antiforgery token belongs to the identity, so fetch a new one
         await using (var scope = factory.Services.CreateAsyncScope()) // make "admin" the only active admin
         {
             var db = scope.ServiceProvider.GetRequiredService<ImsDbContext>();

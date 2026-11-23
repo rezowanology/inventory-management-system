@@ -23,13 +23,21 @@ if (string.IsNullOrWhiteSpace(builder.Configuration["ConnectionStrings:Ims"]))
         "\"Host=localhost;Port=5432;Database=ims;Username=ims_user;Password=<your ims_user password>\" " +
         "--project src/Ims.Api");
 
+// Optional: IMS_DATABASE=<name> swaps only the database NAME of the connection string (host, user and password stay in
+// the user-secret). scripts/export-sql.ps1 uses it to build a throw-away database without touching "ims".
+if (Environment.GetEnvironmentVariable("IMS_DATABASE") is { Length: > 0 } databaseName)
+    builder.Configuration["ConnectionStrings:Ims"] =
+        new Npgsql.NpgsqlConnectionStringBuilder(builder.Configuration["ConnectionStrings:Ims"]) { Database = databaseName }.ConnectionString;
+
 // ---- Database (EF Core + Npgsql, snake_case names) ----
+builder.Services.AddHttpContextAccessor();               // lets the audit code see who is signed in and their IP
 builder.Services.AddSingleton<AppendOnlyInterceptor>(); // rule R6, first line of defence
+builder.Services.AddSingleton<AuditInterceptor>();      // rule R13: audit rows for master data and user changes
 builder.Services.AddDbContext<ImsDbContext>((sp, options) => options
     // Read lazily (inside this callback) so the integration tests can point it at the ims_test database.
     .UseNpgsql(sp.GetRequiredService<IConfiguration>()["ConnectionStrings:Ims"])
     .UseSnakeCaseNamingConvention()
-    .AddInterceptors(sp.GetRequiredService<AppendOnlyInterceptor>()));
+    .AddInterceptors(sp.GetRequiredService<AppendOnlyInterceptor>(), sp.GetRequiredService<AuditInterceptor>()));
 
 // ---- Identity: users, password hashing, cookie sign-in. No Identity role tables: the role is a column. ----
 builder.Services
@@ -95,6 +103,9 @@ builder.Services.AddScoped<UserAdminService>();  // user administration via User
 builder.Services.AddSingleton<AppTime>();        // display time zone helper (A12)
 builder.Services.AddScoped<ExportService>();      // CSV / Excel downloads
 builder.Services.AddScoped<ReportService>();      // stock, summary and barcode reports
+builder.Services.AddScoped<AuditWriter>();         // LOGIN / LOGOUT / LOGIN_FAILED rows
+builder.Services.AddScoped<AuditQueryService>();   // audit log list, detail and export
+builder.Services.AddScoped<DashboardService>();    // dashboard metrics
 
 var app = builder.Build();
 
@@ -103,6 +114,7 @@ if (args.Contains("seed"))
 {
     using var scope = app.Services.CreateScope();
     await DbSeeder.SeedAsync(scope.ServiceProvider);
+    if (args.Contains("--demo-data")) await DemoDataSeeder.SeedAsync(scope.ServiceProvider); // ~25 extra units, see DemoDataSeeder
     Console.WriteLine("Seeding finished.");
     return;
 }
