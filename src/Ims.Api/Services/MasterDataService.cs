@@ -15,8 +15,8 @@ public class MasterDataService(ImsDbContext db)
 {
     // ---- reading ----
 
-    public async Task<PagedResult<MasterDataDto>> ListAsync<T>(MasterDataListQuery query, CancellationToken ct)
-        where T : MasterDataEntity
+    /// <summary>The filtered + sorted query shared by the paged list and the export (same filters, so the file matches the screen).</summary>
+    private IQueryable<T> BuildListQuery<T>(MasterDataListQuery query) where T : MasterDataEntity
     {
         IQueryable<T> rows = db.Set<T>().AsNoTracking();
 
@@ -40,8 +40,17 @@ public class MasterDataService(ImsDbContext db)
             _ => rows.OrderBy(x => x.Name).ThenBy(x => x.Id),
         };
 
-        return (await PagedResult<T>.CreateAsync(ordered, query, ct)).Map(ToDto);
+        return ordered;
     }
+
+    public async Task<PagedResult<MasterDataDto>> ListAsync<T>(MasterDataListQuery query, CancellationToken ct)
+        where T : MasterDataEntity =>
+        (await PagedResult<T>.CreateAsync(BuildListQuery<T>(query), query, ct)).Map(ToDto);
+
+    /// <summary>Every row that matches the filters (no paging) - the export.</summary>
+    public async Task<List<MasterDataDto>> ListAllAsync<T>(MasterDataListQuery query, CancellationToken ct)
+        where T : MasterDataEntity =>
+        (await BuildListQuery<T>(query).ToListAsync(ct)).Select(ToDto).ToList();
 
     /// <summary>Dropdown feed: only non-deleted rows, no paging.</summary>
     public async Task<List<OptionDto>> OptionsAsync<T>(PointType? type, CancellationToken ct) where T : MasterDataEntity

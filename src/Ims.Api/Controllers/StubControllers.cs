@@ -4,17 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Ims.Api.Controllers;
 
-// Every endpoint of the API contract exists from Day 1 with its REAL authorization policy.
+// Endpoints of the API contract exist from Day 1 with their REAL authorization policy.
 // Behaviour is added on the day named in the 501 message. (Stub honesty: a 501 is never a fake success.)
-
-[Route("api/reports")]
-[Authorize(Policy = Capabilities.ReportsView)]
-public class ReportsController : ApiControllerBase
-{
-    [HttpGet("stock")] public IActionResult Stock() => NotBuilt(4);
-    [HttpGet("summary")] public IActionResult Summary() => NotBuilt(4);
-    [HttpGet("barcode")] public IActionResult Barcode() => NotBuilt(4);
-}
+// Day 4 moved the reports to ReportsController.cs; only the audit log is still a stub.
 
 [Route("api/audit")]
 [Authorize(Policy = Capabilities.AuditView)]

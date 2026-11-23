@@ -13,7 +13,7 @@ public class ListQuery
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 20;
     public string? Sort { get; set; }
-    /// <summary>?format=csv|xlsx asks for a file instead of JSON (built on Day 4; until then the API answers 501).</summary>
+    /// <summary>?format=csv or xlsx asks for a file instead of JSON: the same filters, every matching row, no paging.</summary>
     public string? Format { get; set; }
 
     /// <summary>Clamp to sane values so nobody can ask for page 0 or 1,000,000 rows.</summary>

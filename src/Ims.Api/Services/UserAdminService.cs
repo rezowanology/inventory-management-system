@@ -15,7 +15,15 @@ namespace Ims.Api.Services;
 /// </summary>
 public class UserAdminService(UserManager<ApplicationUser> users)
 {
-    public async Task<PagedResult<UserDto>> ListAsync(UserListQuery query, CancellationToken ct)
+    public async Task<PagedResult<UserDto>> ListAsync(UserListQuery query, CancellationToken ct) =>
+        (await PagedResult<ApplicationUser>.CreateAsync(BuildListQuery(query), query, ct)).Map(ToDto);
+
+    /// <summary>Every user that matches the filters (no paging) - the export. Never includes password data.</summary>
+    public async Task<List<UserDto>> ListAllAsync(UserListQuery query, CancellationToken ct) =>
+        (await BuildListQuery(query).ToListAsync(ct)).Select(ToDto).ToList();
+
+    /// <summary>The filtered + sorted query shared by the paged list and the export.</summary>
+    private IQueryable<ApplicationUser> BuildListQuery(UserListQuery query)
     {
         IQueryable<ApplicationUser> rows = users.Users.AsNoTracking();
 
@@ -43,7 +51,7 @@ public class UserAdminService(UserManager<ApplicationUser> users)
             _ => rows.OrderBy(u => u.UserName),
         };
 
-        return (await PagedResult<ApplicationUser>.CreateAsync(ordered, query, ct)).Map(ToDto);
+        return ordered;
     }
 
     public async Task<UserDto?> GetAsync(long id)

@@ -15,6 +15,7 @@ public class ApiExceptionHandler(IProblemDetailsService problemDetails) : IExcep
         {
             DomainException d => Build(422, "Business rule violated", d.Message, d.Code, d.Errors),
             DuplicateScanException s => BuildDuplicate(s),
+            NotFoundException n => new ProblemDetails { Status = 404, Title = "Not found", Detail = n.Message },
             _ => null
         };
         if (pd is null) return false;

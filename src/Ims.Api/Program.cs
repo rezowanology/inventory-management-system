@@ -92,6 +92,9 @@ builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddScoped<InventoryService>();
 builder.Services.AddScoped<MasterDataService>(); // products / components / points
 builder.Services.AddScoped<UserAdminService>();  // user administration via UserManager
+builder.Services.AddSingleton<AppTime>();        // display time zone helper (A12)
+builder.Services.AddScoped<ExportService>();      // CSV / Excel downloads
+builder.Services.AddScoped<ReportService>();      // stock, summary and barcode reports
 
 var app = builder.Build();
 

@@ -1,8 +1,10 @@
+using System.Security.Claims;
 using Ims.Api.Authorization;
 using Ims.Api.Contracts;
 using Ims.Api.Data;
 using Ims.Api.Domain;
 using Ims.Api.Infrastructure;
+using Ims.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -23,15 +25,17 @@ public class HistoryListQuery : ListQuery
 }
 
 [Route("api/history")]
-public class HistoryController(ImsDbContext db, IConfiguration config) : ApiControllerBase
+public class HistoryController(
+    ImsDbContext db, InventoryService inventory, AppTime time, ExportService export, IAuthorizationService authorization)
+    : ApiControllerBase
 {
-    /// <summary>History rows, newest first. Filters: event, point, product, user, date range; search: barcode or component barcode.</summary>
+    private long CurrentUserId => long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+    /// <summary>History rows, newest first. Filters: event, point, product, user, date range; search: barcode or component barcode. ?format=csv|xlsx exports the same rows without paging.</summary>
     [Authorize(Policy = Capabilities.HistoryView)]
     [HttpGet]
     public async Task<ActionResult<PagedResult<HistoryRowDto>>> List([FromQuery] HistoryListQuery query, CancellationToken ct)
     {
-        if (query.Format is not null) return NotBuilt(4); // CSV/Excel export arrives on Day 4
-
         IQueryable<InventoryTransaction> rows = db.InventoryTransactions.AsNoTracking();
         if (query.EventType is { } ev) rows = rows.Where(t => t.EventType == ev);
         if (query.PointId is { } point) rows = rows.Where(t => t.PointId == point);
@@ -39,9 +43,8 @@ public class HistoryController(ImsDbContext db, IConfiguration config) : ApiCont
         if (query.UserId is { } user) rows = rows.Where(t => t.PerformedById == user);
 
         // Day boundaries are local days in App:TimeZone, converted to UTC for the timestamptz column.
-        var zone = ResolveZone();
-        if (query.From is { } from) { var start = ToUtc(from, zone); rows = rows.Where(t => t.OccurredAt >= start); }
-        if (query.To is { } to) { var end = ToUtc(to.AddDays(1), zone); rows = rows.Where(t => t.OccurredAt < end); }
+        if (query.From is { } from) { var start = time.StartOfDayUtc(from); rows = rows.Where(t => t.OccurredAt >= start); }
+        if (query.To is { } to) { var end = time.StartOfDayUtc(to.AddDays(1)); rows = rows.Where(t => t.OccurredAt < end); }
 
         if (query.SearchText is { } text)
         {
@@ -55,10 +58,19 @@ public class HistoryController(ImsDbContext db, IConfiguration config) : ApiCont
             ? rows.OrderBy(t => t.OccurredAt).ThenBy(t => t.Id)
             : rows.OrderByDescending(t => t.OccurredAt).ThenByDescending(t => t.Id);
 
-        return await PagedResult<HistoryRowDto>.CreateAsync(ordered.Select(t => new HistoryRowDto(
-            t.Id, t.Unit!.Barcode, t.Unit.Product!.Name, t.EventType.ToString(), t.Point!.Name,
-            t.Component != null ? t.Component.Name : null, t.ComponentBarcode, t.ReversesId, t.Reason,
-            t.PerformedBy!.EmployeeNo, t.PerformedBy.FirstName + " " + t.PerformedBy.LastName, t.OccurredAt)), query, ct);
+        // Export: the same filtered rows, all of them, no paging.
+        if (query.Format is not null)
+            return export.Create(HistoryQueries.ToExport("history", await ordered.ToDtos(db).ToListAsync(ct), time), query.Format);
+
+        var page = await PagedResult<HistoryRowDto>.CreateAsync(ordered.ToDtos(db), query, ct);
+
+        // canReverse is only worked out for admins (it costs a few extra queries and nobody else may reverse anyway).
+        if ((await authorization.AuthorizeAsync(User, Capabilities.HistoryReverse)).Succeeded)
+        {
+            var reversible = await inventory.ReversibleRowIdsAsync(page.Items.Select(r => r.UnitBarcode), ct);
+            return page.Map(r => r with { CanReverse = reversible.Contains(r.Id) });
+        }
+        return page;
     }
 
     /// <summary>Dropdown contents for the history filters. Needed here because the Report Viewer may not call the /options endpoints.</summary>
@@ -70,24 +82,22 @@ public class HistoryController(ImsDbContext db, IConfiguration config) : ApiCont
         await db.Users.AsNoTracking().OrderBy(u => u.EmployeeNo)
             .Select(u => new OptionDto(u.Id, u.EmployeeNo + " " + u.FirstName + " " + u.LastName)).ToListAsync(ct));
 
-    private TimeZoneInfo ResolveZone()
-    {
-        foreach (var id in new[] { config["App:TimeZone"], "Bangladesh Standard Time" })
-        {
-            if (string.IsNullOrWhiteSpace(id)) continue;
-            try { return TimeZoneInfo.FindSystemTimeZoneById(id); } catch (TimeZoneNotFoundException) { }
-        }
-        return TimeZoneInfo.Utc;
-    }
-
-    private static DateTime ToUtc(DateOnly day, TimeZoneInfo zone) =>
-        TimeZoneInfo.ConvertTimeToUtc(day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified), zone);
-
+    /// <summary>The confirmation screen: the row, whether it may be reversed (and if not, why), and what would change.</summary>
     [Authorize(Policy = Capabilities.HistoryReverse)]
     [HttpGet("{id:long}/reverse-preview")]
-    public IActionResult ReversePreview(long id) => NotBuilt(4);
+    public async Task<ReversePreviewDto> ReversePreview(long id, CancellationToken ct)
+    {
+        var (_, check) = await inventory.PreviewReversalAsync(id, ct); // throws NotFoundException -> 404
+        var row = await db.InventoryTransactions.AsNoTracking().Where(t => t.Id == id).ToDtos(db).FirstAsync(ct);
+        return new ReversePreviewDto(row with { CanReverse = check.Allowed }, check.Allowed, check.BlockedReason, check.Effect);
+    }
 
+    /// <summary>Adds a REVERSED row (never changes the old one). A blocked reversal is a 422 with the reason.</summary>
     [Authorize(Policy = Capabilities.HistoryReverse)]
     [HttpPost("{id:long}/reverse")]
-    public IActionResult Reverse(long id) => NotBuilt(4);
+    public async Task<ReverseResultDto> Reverse(long id, ReverseRequest request, CancellationToken ct)
+    {
+        var result = await inventory.ReverseAsync(id, request.Reason, CurrentUserId, ct);
+        return new ReverseResultDto(result.ReversalId, result.UnitBarcode, result.ReversedEventType, result.Effect);
+    }
 }

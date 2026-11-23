@@ -13,14 +13,26 @@ namespace Ims.Api.Controllers;
 /// the three tiny classes at the bottom only add the URL. Controllers stay thin: the rules live in MasterDataService.
 /// Authorization is on each action (not on the class) because /options is also needed by non-admin screens.
 /// </summary>
-public abstract class MasterDataController<T>(MasterDataService service) : ApiControllerBase
+public abstract class MasterDataController<T>(MasterDataService service, ExportService export, AppTime time) : ApiControllerBase
     where T : MasterDataEntity, new()
 {
+    /// <summary>File-name prefix of the export (products_20261123-1030.csv).</summary>
+    protected abstract string Report { get; }
+
     [Authorize(Policy = Capabilities.MasterDataManage)]
     [HttpGet]
     public async Task<ActionResult<PagedResult<MasterDataDto>>> List([FromQuery] MasterDataListQuery query, CancellationToken ct)
     {
-        if (query.Format is not null) return NotBuilt(4); // CSV/Excel export arrives on Day 4
+        if (query.Format is not null) // ?format=csv|xlsx: the same filters, every row, as a file
+        {
+            var all = await service.ListAllAsync<T>(query, ct);
+            var hasType = typeof(T) == typeof(Point);
+            return export.Create(new ExportTable(Report,
+                hasType ? ["Name", "Type", "Status", "Created", "Updated"] : ["Name", "Status", "Created", "Updated"],
+                all.Select(r => hasType
+                    ? new object?[] { r.Name, r.PointType, r.IsDeleted ? "Archived" : "Active", time.Format(r.CreatedAt), time.Format(r.UpdatedAt) }
+                    : new object?[] { r.Name, r.IsDeleted ? "Archived" : "Active", time.Format(r.CreatedAt), time.Format(r.UpdatedAt) }).ToList()), query.Format);
+        }
         return await service.ListAsync<T>(query, ct);
     }
 
@@ -60,6 +72,6 @@ public abstract class MasterDataController<T>(MasterDataService service) : ApiCo
         await service.RestoreAsync<T>(id, ct) is { } dto ? dto : NotFound();
 }
 
-[Route("api/products")] public class ProductsController(MasterDataService s) : MasterDataController<Product>(s) { }
-[Route("api/components")] public class ComponentsController(MasterDataService s) : MasterDataController<Component>(s) { }
-[Route("api/points")] public class PointsController(MasterDataService s) : MasterDataController<Point>(s) { }
+[Route("api/products")] public class ProductsController(MasterDataService s, ExportService e, AppTime t) : MasterDataController<Product>(s, e, t) { protected override string Report => "products"; }
+[Route("api/components")] public class ComponentsController(MasterDataService s, ExportService e, AppTime t) : MasterDataController<Component>(s, e, t) { protected override string Report => "components"; }
+[Route("api/points")] public class PointsController(MasterDataService s, ExportService e, AppTime t) : MasterDataController<Point>(s, e, t) { protected override string Report => "points"; }

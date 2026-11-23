@@ -27,7 +27,7 @@ type FormValues = z.infer<typeof schema>
 
 /** /ops/track: scan the unit, pick the track point, scan components into a batch, save all at once. */
 export function TrackPage() {
-  const { barcode, setBarcode, scanId, notice, setNotice, unit, timeZone, finish } = useOpsPage()
+  const { initialBarcode, barcode, setBarcode, scanId, notice, setNotice, unit, timeZone, finish } = useOpsPage()
   const [rememberedPoint, rememberPoint] = useRememberedPoint('ims.trackPoint')
   const products = useOptions('products')
   const components = useOptions('components')
@@ -93,7 +93,7 @@ export function TrackPage() {
       <h1 className="h4 mb-3">Track components</h1>
       {notice && <div className="alert alert-success" role="status">{notice}</div>}
       <ScanPanel
-        key={scanId} label="Product barcode (the unit)" committed={barcode}
+        key={scanId} label="Product barcode (the unit)" initialBarcode={initialBarcode} committed={barcode}
         onCommit={(b) => { setBarcode(b); setNotice(null); save.reset(); setRowWarning(null) }}
       />
 

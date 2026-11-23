@@ -13,6 +13,10 @@ import { ReceivePage } from './pages/ops/ReceivePage'
 import { TrackPage } from './pages/ops/TrackPage'
 import { ForbiddenPage } from './pages/ForbiddenPage'
 import { HistoryPage } from './pages/HistoryPage'
+import { ReversePage } from './pages/history/ReversePage'
+import { BarcodeReportPage } from './pages/reports/BarcodeReportPage'
+import { StockReportPage } from './pages/reports/StockReportPage'
+import { SummaryReportPage } from './pages/reports/SummaryReportPage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
@@ -41,11 +45,11 @@ export function App() {
         <Route path="/ops/deliver" element={guarded(CAP.opsDeliver, <DeliverPage />)} />
 
         <Route path="/history" element={guarded(CAP.historyView, <HistoryPage />)} />
-        <Route path="/history/:id/reverse" element={guarded(CAP.historyReverse, <StubPage title="Reverse a history row" day={4} />)} />
+        <Route path="/history/:id/reverse" element={guarded(CAP.historyReverse, <ReversePage />)} />
 
-        <Route path="/reports/stock" element={guarded(CAP.reportsView, <StubPage title="Stock report" day={4} />)} />
-        <Route path="/reports/summary" element={guarded(CAP.reportsView, <StubPage title="Summary report" day={4} />)} />
-        <Route path="/reports/barcode" element={guarded(CAP.reportsView, <StubPage title="Barcode history" day={4} />)} />
+        <Route path="/reports/stock" element={guarded(CAP.reportsView, <StockReportPage />)} />
+        <Route path="/reports/summary" element={guarded(CAP.reportsView, <SummaryReportPage />)} />
+        <Route path="/reports/barcode" element={guarded(CAP.reportsView, <BarcodeReportPage />)} />
 
         <Route path="/manage/products" element={guarded(CAP.masterData, <MasterDataPage config={MASTER_KINDS.products} />)} />
         <Route path="/manage/components" element={guarded(CAP.masterData, <MasterDataPage config={MASTER_KINDS.components} />)} />

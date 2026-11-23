@@ -22,3 +22,10 @@
 - **Checked in the browser (as admin):** a new barcode in Track shows the amber card and product select; scanning the same component twice shows the yellow warning; saving a component owned by another unit shows the error on its row and in the alert; History filtered by DELIVERED. The full tracker -> receiver -> deliverer walk with the three role accounts was covered by API tests, not clicked through.
 - **Next:** Day 4 - reversals, the three reports with a chart, CSV/Excel export.
 - **Risk:** Day 4 is heavy (reversal rules plus three reports).
+
+## Day 4 - 23 Nov 2026
+- **Works:** admin reversals with live preview and reason (detach component, back to Registered, back in stock at the original receive point), struck-through reversed rows, three reports (stock with per-point chips, summary with totals + bar chart + table, barcode history timeline by unit or component barcode), and CSV/Excel export on history, reports and the admin lists.
+- **Tests:** 98 .NET tests (34 new: every reversal rule allowed/blocked, 403s, stock/summary/barcode numbers, CSV/XLSX content, filters, paging ignored) and 36 Vitest tests (7 new: export URLs, short-reason form), all passing.
+- **Checked in the running app (as admin):** reversed the delivery of a demo unit -> back in stock at its receive point, the success link opens /ops/deliver with the barcode pre-filled; summary 27-30 March shows 1/1/1 with a rendered chart; the Excel download is served with the right content type. Not clicked through as the viewer; viewer rights are covered by API tests.
+- **Next:** Day 5 - audit log, dashboard tiles, demo data, final diagrams, SQL deliverables.
+- **Risk:** the stock report is computed in memory (fine for hundreds of units). The sample record was not reversed in `ims`; a separate demo unit DEMO-UNIT-0001 was used and is still in that database.

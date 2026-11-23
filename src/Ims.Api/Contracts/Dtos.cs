@@ -20,6 +20,10 @@ public record ConfigResponse(string TimeZone);
 
 public record DashboardResponse(int TotalUnits, int StockCount);
 
+/// <summary>
+/// One history row as the list, the reports and the exports show it. The last three values describe the reversal that
+/// cancelled this row (if any); <c>CanReverse</c> is only filled in for admins (it is false for everybody else).
+/// </summary>
 public record HistoryRowDto(
     long Id,
     string UnitBarcode,
@@ -32,4 +36,19 @@ public record HistoryRowDto(
     string Reason,
     string PerformedByEmployeeNo,
     string PerformedByName,
-    DateTime OccurredAt);
+    DateTime OccurredAt,
+    long? ReversedById,
+    string? ReversedBy,
+    DateTime? ReversedAt)
+{
+    /// <summary>True when an admin has cancelled this row. Computed from the reversal columns above.</summary>
+    public bool Reversed => ReversedById is not null;
+    public bool CanReverse { get; init; }
+}
+
+/// <summary>The "are you sure?" screen of a reversal: the row, the verdict, and what would change.</summary>
+public record ReversePreviewDto(HistoryRowDto Row, bool Allowed, string? BlockedReason, string Effect);
+
+public record ReverseRequest([Required, StringLength(500)] string Reason);
+
+public record ReverseResultDto(long ReversalId, string UnitBarcode, string ReversedEventType, string Effect);

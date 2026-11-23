@@ -4,9 +4,10 @@ A barcode-based inventory system that follows one physical unit from **component
 It has five roles (one per user, enforced on the server), an append-only inventory history, admin-only reversals,
 reports, CSV/Excel export, an audit log and a dashboard. This is an industrial-attachment learning/demo project.
 
-**Status: Day 3 of 6 - operations done.** Login, the admin panel, **component tracking, receiving and delivery** (with the
-duplicate-scan warning), a filterable `/history`, password change and forced logout work. Reversals, reports, audit log and
-export arrive on Days 4-5 (their screens and endpoints exist as stubs).
+**Status: Day 4 of 6 - reversals, reports and export done.** Login, the admin panel, **component tracking, receiving and delivery**
+(with the duplicate-scan warning), a filterable `/history`, **admin reversals**, **three reports** (stock, summary with a chart,
+barcode history), **CSV/Excel export** on every list, password change and forced logout work. The audit log and the dashboard tiles
+arrive on Day 5 (their endpoints exist as stubs).
 
 ## Stack and why
 
@@ -117,7 +118,7 @@ user menu (top right).
   call returns 401 and the app shows the login page with "Your session has ended. Please sign in again."
 - **Lists keep their state in the URL** (`?q=&status=&page=`), so Back, refresh and copied links keep the filters.
 - **Dropdown feed:** `GET /api/<products|components|points>/options` returns non-archived rows only (also for the operational roles).
-- **Export buttons** are on every list but the API answers 501 until Day 4.
+- **Export buttons** (CSV and Excel) are on every list, see "Reversals, reports & export" below.
 
 ## Operations (Day 3)
 
@@ -145,6 +146,43 @@ for the browser session.
 
 API: `GET /api/units/lookup?barcode=`, `POST /api/ops/track | receive | deliver` (each answers with the unit's updated state),
 `GET /api/history` with `eventType, pointId, productId, userId, from, to, q, page, pageSize, sort`.
+
+## Reversals, reports & export (Day 4)
+
+**Reversing a row (Admin only).** On `/history` an admin sees a **Reverse** button on every row that may be reversed (others show a
+greyed button with a tooltip that says why). The screen `/history/:id/reverse` shows the original row, **what will change**
+(for example "Unit 2440701AK2057 will return to stock at Refrigerator Receive Point 1") and asks for a **reason of at least 5 characters**.
+The old row is never edited: a new `REVERSED` row is added, the old one is shown struck through with "reversed by X on Y".
+Afterwards a link opens the matching scan screen with the barcode pre-filled, so the correct entry can be made.
+
+| Reversing a... | Allowed when | Effect |
+|---|---|---|
+| COMPONENT_TRACKED row | always (not already reversed) | the component is detached and its barcode can be tracked again, also on another unit |
+| RECEIVED row | the unit has **not** been delivered | the unit goes back to *Registered* (not in stock) |
+| DELIVERED row | it is the unit's latest delivery | the unit is *In stock* again at the receive point it had been received at |
+
+A row can be reversed once, and a REVERSED row can never be reversed (checked in `InventoryService` and by the database trigger).
+
+**Reports** (`reports.view`: Admin and Report Viewer; the Report Viewer sees everything read-only):
+
+- **Stock** (`/reports/stock`): one row per unit in stock now: barcode, product, receive point, received at/by, days in stock, number of
+  components. Chips show the count per receive point (click to filter); filters product and minimum days; search; sort; paging.
+- **Summary** (`/reports/summary`): choose from/to (default: the last 30 days, at most 366 days, from <= to) and optionally product and
+  point. Shows totals (tracked, received, delivered, reversed), a bar chart per day and a per-day table.
+- **Barcode history** (`/reports/barcode`): type a unit barcode **or a component barcode**. A component that was attached to several
+  units over time lets you pick the unit. Shows the unit card and a timeline of **all** rows, reversed rows struck through and linked to
+  their reversal (reason and admin).
+
+All numbers come from the history; nothing is a stored counter. A reversed delivery therefore puts the unit back into the stock report
+and the dashboard.
+
+**Export.** Every list and report has **Export CSV** and **Export Excel** buttons. They are plain links to the same endpoint with
+`&format=csv|xlsx`: the same filters, **all** matching rows (no paging), times in the configured time zone, file name
+`<report>_<yyyyMMdd-HHmm>.<ext>`. CSV is RFC 4180 with a UTF-8 BOM (opens correctly in Excel); the Excel file has a bold, frozen,
+filterable header row and fitted column widths. Text cells that would start a spreadsheet formula (`=`, `+`, `-`, `@`) get a leading `'` in CSV.
+
+API: `GET /api/history/{id}/reverse-preview`, `POST /api/history/{id}/reverse {reason}`, `GET /api/reports/stock | summary | barcode`,
+and `?format=csv|xlsx` on `/api/history`, `/api/reports/*`, `/api/products`, `/api/components`, `/api/points`, `/api/users`.
 
 ## Project layout
 

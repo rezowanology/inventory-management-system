@@ -14,8 +14,8 @@ public record UnitStatus(UnitState State, string? PointName = null, DateTime? Si
 
 /// <summary>
 /// ALL inventory rules live here (controllers stay thin). Status is never stored: it is derived from the
-/// append-only history (assumption A10). Reads (status, components, stock) plus the Day 3 write
-/// operations Track/Receive/Deliver; Reverse arrives on Day 4.
+/// append-only history (assumption A10). Reads (status, components, stock), the Day 3 write
+/// operations Track/Receive/Deliver and the Day 4 admin reversal.
 /// </summary>
 public class InventoryService(ImsDbContext db, IClock clock)
 {
@@ -336,6 +336,118 @@ public class InventoryService(ImsDbContext db, IClock clock)
         }
     }
 
-    /// <summary>Day 4: admin reversal with a reason (rules R7-R10).</summary>
-    public Task ReverseAsync() => throw new NotImplementedException("Built on Day 4");
+    // =====================================================================================================
+    // Day 4: admin reversal (rules R7-R10). A reversal NEVER changes the old row: it ADDS a REVERSED row that
+    // points at it (reverses_id). "Effective rows" then simply skip both, so status, stock and attached
+    // components are re-derived and the unit goes back to what it was before the cancelled step.
+    // =====================================================================================================
+
+    /// <summary>The verdict for one row: may it be reversed, why not, what would happen, and which point the REVERSED row records.</summary>
+    public record ReversalCheck(bool Allowed, string? BlockedReason, string Effect, long PointId);
+
+    /// <summary>
+    /// Pure decision logic (no database access, so it is easy to test): can <paramref name="target"/> be reversed,
+    /// given the unit's current effective rows?
+    /// Reversal point semantics: COMPONENT_TRACKED and RECEIVED rows record their own point; a reversed DELIVERED row
+    /// records the RECEIVE point the unit returns to (R9).
+    /// </summary>
+    private static ReversalCheck EvaluateReversal(InventoryTransaction target, string unitBarcode, IReadOnlyList<InventoryTransaction> effective)
+    {
+        ReversalCheck Blocked(string why) => new(false, why, "", target.PointId);
+
+        if (target.EventType == EventType.REVERSED)
+            return Blocked("This row is itself a reversal, and a reversal can never be reversed.");
+        if (effective.All(e => e.Id != target.Id))
+            return Blocked("This row has already been reversed (a row can be reversed only once).");
+
+        switch (target.EventType)
+        {
+            case EventType.COMPONENT_TRACKED: // R10: detach the component; its barcode becomes free again
+                return new(true, null,
+                    $"Component {target.Component?.Name} ({target.ComponentBarcode}) will be detached from unit {unitBarcode}. Its barcode can be tracked again.",
+                    target.PointId);
+
+            case EventType.RECEIVED: // R8: not once the unit has been delivered
+                if (DeriveStatus(effective).State == UnitState.Delivered)
+                    return Blocked($"Unit {unitBarcode} has been delivered since this receive. Reverse the delivery first.");
+                return new(true, null,
+                    $"Unit {unitBarcode} will no longer be in stock. It goes back to Registered (not received).", target.PointId);
+
+            case EventType.DELIVERED: // R9: only the latest effective delivery; the unit returns to its receive point
+                var latest = effective.LastOrDefault(e => e.EventType == EventType.DELIVERED);
+                var received = effective.LastOrDefault(e => e.EventType == EventType.RECEIVED);
+                if (latest is null || latest.Id != target.Id || received is null)
+                    return Blocked("Only the latest delivery of a unit can be reversed.");
+                return new(true, null,
+                    $"Unit {unitBarcode} will return to stock at {received.Point?.Name}.", received.PointId);
+
+            default:
+                return Blocked("This kind of row cannot be reversed.");
+        }
+    }
+
+    /// <summary>The row plus the verdict, for the "are you sure?" screen. Throws NotFoundException for an unknown id.</summary>
+    public async Task<(InventoryTransaction Row, ReversalCheck Check)> PreviewReversalAsync(long rowId, CancellationToken ct = default)
+    {
+        var row = await db.InventoryTransactions.AsNoTracking()
+            .Include(t => t.Unit).Include(t => t.Point).Include(t => t.Component)
+            .FirstOrDefaultAsync(t => t.Id == rowId, ct)
+            ?? throw new NotFoundException($"History row {rowId} does not exist.");
+        var effective = await GetEffectiveRowsAsync(row.UnitId, ct);
+        return (row, EvaluateReversal(row, row.Unit!.Barcode, effective));
+    }
+
+    /// <summary>
+    /// Which of these units' rows can be reversed right now? Used to switch the Reverse buttons on or off on the
+    /// history page (only asked for admins). Demo scale: one small query per distinct unit on the page.
+    /// </summary>
+    public async Task<HashSet<long>> ReversibleRowIdsAsync(IEnumerable<string> unitBarcodes, CancellationToken ct = default)
+    {
+        var allowed = new HashSet<long>();
+        foreach (var code in unitBarcodes.Distinct())
+        {
+            var unit = await db.Units.AsNoTracking().FirstOrDefaultAsync(u => u.Barcode == code, ct);
+            if (unit is null) continue;
+            var effective = await GetEffectiveRowsAsync(unit.Id, ct);
+            foreach (var row in effective)
+                if (EvaluateReversal(row, code, effective).Allowed) allowed.Add(row.Id);
+        }
+        return allowed;
+    }
+
+    /// <summary>The answer of a successful reversal.</summary>
+    public record ReversalResult(long ReversalId, string UnitBarcode, string ReversedEventType, string Effect);
+
+    /// <summary>
+    /// Reverse one history row (admin only; the controller checks the policy). One locked transaction:
+    /// reason of 5+ characters, the target must still be reversible, then ONE REVERSED row is added.
+    /// </summary>
+    public async Task<ReversalResult> ReverseAsync(long rowId, string? reason, long adminId, CancellationToken ct = default)
+    {
+        var cleanReason = (reason ?? "").Trim();
+        if (cleanReason.Length < 5)
+            throw Fail("reason-too-short", "Give a reason of at least 5 characters.", "reason");
+
+        var target = await db.InventoryTransactions.AsNoTracking()
+            .Include(t => t.Unit).FirstOrDefaultAsync(t => t.Id == rowId, ct)
+            ?? throw new NotFoundException($"History row {rowId} does not exist.");
+        var code = target.Unit!.Barcode;
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await LockUnitAsync(code, ct); // serialize with scans and other reversals of this unit
+
+        // Re-read AFTER the lock: someone may have changed the unit a moment ago.
+        var (row, check) = await PreviewReversalAsync(rowId, ct);
+        if (!check.Allowed) throw Fail("reversal-blocked", check.BlockedReason!);
+
+        var reversal = new InventoryTransaction
+        {
+            UnitId = row.UnitId, EventType = EventType.REVERSED, PointId = check.PointId, ReversesId = row.Id,
+            Reason = cleanReason, PerformedById = adminId, OccurredAt = clock.UtcNow,
+        };
+        db.InventoryTransactions.Add(reversal);
+        await SaveAsync(ct);
+        await tx.CommitAsync(ct);
+        return new ReversalResult(reversal.Id, code, row.EventType.ToString(), check.Effect);
+    }
 }

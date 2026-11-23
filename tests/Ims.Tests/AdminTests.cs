@@ -125,7 +125,7 @@ public class AdminTests(ImsApiFactory factory)
             Assert.True((await Json(await admin.DeleteAsync($"/api/products/{id}"))).GetProperty("archived").GetBoolean());
             Assert.DoesNotContain("Refrigerator", await OptionNames(admin, "/api/products/options"));
 
-            var history = await Json(await admin.GetAsync("/api/history"));
+            var history = await Json(await admin.GetAsync("/api/history?q=2440701AK2057")); // the sample unit; other tests add Freezer / A/C units
             Assert.All(history.GetProperty("items").EnumerateArray(),
                 row => Assert.Equal("Refrigerator", row.GetProperty("productName").GetString()));
         }

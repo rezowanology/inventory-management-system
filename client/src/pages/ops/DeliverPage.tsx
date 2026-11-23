@@ -9,7 +9,7 @@ import { useOpsPage } from './useOpsPage'
 
 /** /ops/deliver: scan a unit, choose the delivery point, save. Only an in-stock unit can be delivered. */
 export function DeliverPage() {
-  const { barcode, setBarcode, scanId, notice, setNotice, unit, timeZone, finish } = useOpsPage()
+  const { initialBarcode, barcode, setBarcode, scanId, notice, setNotice, unit, timeZone, finish } = useOpsPage()
   const [rememberedPoint, rememberPoint] = useRememberedPoint('ims.deliveryPoint')
   const points = useOptions('points', 'DELIVERY')
   const pointId = points.data?.some((p) => String(p.id) === rememberedPoint) ? rememberedPoint : ''
@@ -27,7 +27,7 @@ export function DeliverPage() {
     <>
       <h1 className="h4 mb-3">Deliver units</h1>
       {notice && <div className="alert alert-success" role="status">{notice}</div>}
-      <ScanPanel key={scanId} committed={barcode} onCommit={(b) => { setBarcode(b); setNotice(null); save.reset() }} />
+      <ScanPanel key={scanId} initialBarcode={initialBarcode} committed={barcode} onCommit={(b) => { setBarcode(b); setNotice(null); save.reset() }} />
       <ScanErrorAlert error={save.error} timeZone={timeZone} />
 
       {unit && !inStock && (

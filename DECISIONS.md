@@ -84,6 +84,33 @@ Every judgment call: date, decision, reason. The **Carry-over** section at the b
 | Older tests that assumed an empty test database (dashboard counts, history total) now look only at the seeded sample unit | All test classes share `ims_test`, and the new operation tests add units |
 | The trigger test inserts one scratch reversal row by raw SQL in `ims_test` | The only way to prove "a reversal cannot be reversed" before Day 4 builds reversals; append-only means it stays, harmlessly |
 
+## Day 4 choices (23 Nov 2026)
+
+| Decision | Reason |
+|---|---|
+| **Reversal-point semantics:** the REVERSED row records the point of the row it cancels (track point / receive point), except a reversed DELIVERED row, which records the **receive point the unit returns to** (the one of its last effective RECEIVED row) | `inventory_transactions.point_id` is NOT NULL; R9 says the unit returns to its original receive point, and "stock by receive point" is derived from the last effective RECEIVED row anyway |
+| Reversing a COMPONENT_TRACKED row is allowed in every status, also after delivery | R10 has no status condition and the brief says only "detach the component" |
+| The reversal rules are one pure function (`EvaluateReversal`) used by the preview, the list's `canReverse` flag and the real reversal (which re-checks inside the locked transaction) | Button, preview and action can never disagree |
+| `canReverse` is only computed for admins (one small query per distinct unit on the page); everyone else gets `false` | Saves work, and nobody else may reverse |
+| A too-short reason is a **422** with a field error on `reason` (the request body only enforces "required, max 500") | Same `code`/field-error shape as every other rule; the React form blocks it first with zod |
+| New `NotFoundException` -> 404 ProblemDetails (unknown history row) | Operations errors were 422/409 only; a wrong id is a 404 |
+| `AppTime` (singleton) holds the display zone; `HistoryController` no longer has its own copy | One place for "local day" and "local time" (history filters, summary days, exported times) |
+| Exports reuse the list's filter code and just skip paging (master data and users got a `BuildListQuery` shared by list and export) | The file always matches the screen |
+| Export buttons are plain `<a download>` links, not fetch | Same origin, so the cookie is sent; no blob handling |
+| CSV text cells starting with `=`, `+`, `-`, `@` get a leading `'` | Stops Excel running imported text as a formula (CSV injection). Excel cells are always written as text |
+| Excel export has one sheet named after the report; times are text in the display zone, numbers are numbers | Simple and readable; no time-zone surprises when opened in Excel |
+| **Stock report** is computed in memory from the effective rows of all units (one query), then filtered/sorted/paged | A10 (demo scale); keeps the "derived, never stored" rule in one readable place. The per-point chips ignore the point filter so they stay usable |
+| "Days in stock" = whole days (rounded down) since the unit's last effective RECEIVED row | Matches "longest-stuck stock" on the Day 5 dashboard |
+| **Summary report:** default range = today and the 29 days before it (30 days, inclusive); every day appears even with zeros; the table is paged (15 days) but the chart gets all days; "Tracked" counts one row per component | Matches the brief's per-day graph; the sample 2026-03-27..30 gives 1/1/1 |
+| An invalid summary range is a 422 with field errors on `from` / `to` | Shown under the date inputs |
+| **Barcode report:** a unit barcode wins over a component barcode if both exist; a component barcode matches every unit it was **ever** attached to (reversed rows count); several matches -> the user picks; nothing found -> 200 with `found: false` | The report is a full history; "not found" is an answer, not a failure |
+| The barcode export needs a single unit (422 otherwise) | An export of "pick one" makes no sense |
+| `?barcode=` on the three scan pages is read by `useOpsPage` and handed to `ScanPanel` (`initialBarcode`) | The link after a reversal pre-fills and looks up the unit; only the first panel is pre-filled, "scan next" starts empty |
+| Report filter dropdowns reuse `GET /api/history/filter-options` | The Report Viewer may not call `/options` |
+| Chart colours are read from Bootstrap's CSS variables at render time | A canvas cannot use `var()`; keeps the chart in the Bootstrap palette |
+| An old Day 2 test now filters history to the sample unit instead of assuming every row is a Refrigerator | New tests create Freezer / Air Conditioner units in the shared `ims_test` |
+| Manual check used a separate demo unit (`DEMO-UNIT-0001`) and **not** a database reset | The `ims` database may hold the user's own test data; the API tests already prove "reverse a delivery" on throw-away units |
+
 ## Carry-over
 
 - Day 6 deliverable: diagrams are Mermaid **drafts** (`docs/diagrams/`); final images come on Day 5/6.

@@ -13,6 +13,8 @@ interface Props {
   /** Called with the normalized barcode on Enter, or with '' when the user edits the text after a scan. */
   onCommit: (barcode: string) => void
   label?: string
+  /** Pre-filled barcode, e.g. from ?barcode= after a reversal. Only used when the panel first appears. */
+  initialBarcode?: string
 }
 
 /**
@@ -21,8 +23,8 @@ interface Props {
  * Pages "scan next" by changing the React `key` of this component: that remounts it, which empties the box and
  * (because of autoFocus) puts the cursor back in it.
  */
-export function ScanPanel({ committed, onCommit, label = 'Unit barcode' }: Props) {
-  const [text, setText] = useState('')
+export function ScanPanel({ committed, onCommit, label = 'Unit barcode', initialBarcode = '' }: Props) {
+  const [text, setText] = useState(initialBarcode)
   const [formatError, setFormatError] = useState<string | null>(null)
   const lookup = useUnitLookup(committed)
   const config = useQuery({ queryKey: ['config'], queryFn: configApi.get, staleTime: Infinity })

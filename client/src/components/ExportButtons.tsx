@@ -1,26 +1,24 @@
-import { useState } from 'react'
-import { request } from '../api/client'
-import { ErrorAlert } from './Alerts'
+/**
+ * The link a download button points at: the SAME list endpoint and the SAME filters as the screen, plus format=csv|xlsx.
+ * (The server ignores paging for files, so every matching row is exported.) Pure function, so it is easy to test.
+ */
+export function exportUrl(path: string, query: string, format: 'csv' | 'xlsx'): string {
+  return `${path}?${query}${query ? '&' : ''}format=${format}`
+}
 
 /**
- * CSV / Excel buttons. They already call the list endpoint with format=csv|xlsx and the same filters;
- * the API answers "501 Not implemented" until the real export is built on Day 4 and the message is shown here.
+ * CSV / Excel buttons. They are ordinary links: the browser downloads the file itself and sends the sign-in cookie
+ * (same origin), so no fetch() is needed. `disabled` greys them out (e.g. while the date range is invalid).
  */
-export function ExportButtons({ path, query }: { path: string; query: string }) {
-  const [error, setError] = useState<unknown>(null)
-
-  async function run(format: 'csv' | 'xlsx') {
-    setError(null)
-    try { await request(`${path}?${query}${query ? '&' : ''}format=${format}`) } catch (e) { setError(e) }
-  }
-
+export function ExportButtons({ path, query, disabled = false }: { path: string; query: string; disabled?: boolean }) {
+  const link = (format: 'csv' | 'xlsx', label: string) => (
+    <a className={`btn btn-outline-secondary ${disabled ? 'disabled' : ''}`} href={exportUrl(path, query, format)}
+      download aria-disabled={disabled} tabIndex={disabled ? -1 : undefined}>{label}</a>
+  )
   return (
-    <div className="d-flex flex-column align-items-end">
-      <div className="btn-group btn-group-sm">
-        <button type="button" className="btn btn-outline-secondary" onClick={() => run('csv')}>Export CSV</button>
-        <button type="button" className="btn btn-outline-secondary" onClick={() => run('xlsx')}>Export Excel</button>
-      </div>
-      {error ? <div className="mt-2"><ErrorAlert error={error} /></div> : null}
+    <div className="btn-group btn-group-sm">
+      {link('csv', 'Export CSV')}
+      {link('xlsx', 'Export Excel')}
     </div>
   )
 }

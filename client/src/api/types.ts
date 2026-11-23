@@ -28,6 +28,13 @@ export interface HistoryRow {
   performedByEmployeeNo: string
   performedByName: string
   occurredAt: string
+  /** The REVERSED row that cancelled this row (null = not reversed). */
+  reversedById: number | null
+  reversedBy: string | null
+  reversedAt: string | null
+  reversed: boolean
+  /** Only true for admins, and only when the reversal rules allow it right now. */
+  canReverse: boolean
 }
 
 export interface DashboardData {
@@ -132,4 +139,66 @@ export interface HistoryFilterOptions {
   products: Option[]
   points: Option[]
   users: Option[]
+}
+
+// ---- Day 4: reversals ----
+
+export interface ReversePreview {
+  row: HistoryRow
+  allowed: boolean
+  blockedReason: string | null
+  effect: string
+}
+
+export interface ReverseResult {
+  reversalId: number
+  unitBarcode: string
+  reversedEventType: string
+  effect: string
+}
+
+// ---- Day 4: reports ----
+
+export interface StockRow {
+  barcode: string
+  productName: string
+  pointId: number
+  pointName: string
+  receivedAt: string
+  receivedBy: string
+  daysInStock: number
+  componentCount: number
+}
+
+export interface PointCount { pointId: number; pointName: string; count: number }
+
+export interface StockReport {
+  items: StockRow[]
+  page: number
+  pageSize: number
+  totalCount: number
+  byPoint: PointCount[]
+}
+
+export interface SummaryDay { day: string; tracked: number; received: number; delivered: number; reversed: number }
+
+export interface SummaryReport {
+  from: string
+  to: string
+  totals: { tracked: number; received: number; delivered: number; reversed: number }
+  chart: SummaryDay[]
+  items: SummaryDay[]
+  page: number
+  pageSize: number
+  totalCount: number
+}
+
+export interface UnitMatch { barcode: string; productName: string; status: UnitStatusName }
+
+export interface BarcodeReport {
+  query: string
+  found: boolean
+  unit: UnitLookup | null
+  matches: UnitMatch[]
+  timeline: HistoryRow[]
 }

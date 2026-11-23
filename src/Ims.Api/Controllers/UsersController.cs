@@ -10,12 +10,19 @@ namespace Ims.Api.Controllers;
 
 [Route("api/users")]
 [Authorize(Policy = Capabilities.UsersManage)]
-public class UsersController(UserAdminService service) : ApiControllerBase
+public class UsersController(UserAdminService service, ExportService export, AppTime time) : ApiControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<PagedResult<UserDto>>> List([FromQuery] UserListQuery query, CancellationToken ct)
     {
-        if (query.Format is not null) return NotBuilt(4); // CSV/Excel export arrives on Day 4
+        if (query.Format is not null)
+        {
+            var all = await service.ListAllAsync(query, ct);
+            return export.Create(new ExportTable("users",
+                ["User name", "First name", "Last name", "Employee no.", "Role", "Status", "Last sign-in"],
+                all.Select(u => new object?[] { u.UserName, u.FirstName, u.LastName, u.EmployeeNo, u.Role,
+                    u.IsPending ? "Pending registration" : u.IsActive ? "Active" : "Inactive", time.Format(u.LastLoginAt) }).ToList()), query.Format);
+        }
         return await service.ListAsync(query, ct);
     }
 

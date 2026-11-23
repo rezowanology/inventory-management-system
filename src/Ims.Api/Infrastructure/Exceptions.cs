@@ -14,3 +14,6 @@ public class DuplicateScanException(string message, DateTime when, string where,
     public string Where { get; } = where;
     public string By { get; } = by;
 }
+
+/// <summary>The thing the URL points at does not exist (e.g. reversing history row 99999). Mapped to HTTP 404.</summary>
+public class NotFoundException(string message) : Exception(message);

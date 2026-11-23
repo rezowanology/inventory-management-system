@@ -134,3 +134,24 @@ so comparisons to C++ are included where they help.
 - **State in the URL.** `HistoryPage.tsx` keeps all filters in the query string with `useListParams`, so a filtered history can be bookmarked.
 - **Testing UI.** `ScanPanel.test.tsx` replaces `fetch` with a fake (`vi.stubGlobal`) and types into the input like a user; `lib/batch.test.ts`
   tests the duplicate rule as a plain function.
+
+## Day 4 - 23 Nov 2026 (reversals, reports, export)
+
+**.NET**
+- **LINQ projection into a record.** `Services/HistoryQueries.cs` turns history rows into `HistoryRowDto` with `.Select(t => new HistoryRowDto(...))`. EF Core
+  translates it into one SQL query, including the small sub-queries that find "the row that reversed this one". Selecting only the columns you need is cheaper than loading whole entities.
+- **GroupBy in memory.** `Services/ReportService.cs` loads the effective rows once (`ToListAsync`), then uses `GroupBy` per unit to find the last RECEIVED/DELIVERED row.
+  When the data is small this is simpler than one giant SQL statement, and the rule stays readable in C#.
+- **Records as DTOs.** `Contracts/ReportDtos.cs` describes every report answer as a one-line `record`. A record is an immutable data holder; `row with { CanReverse = true }` copies it with one change.
+- **A pure function for rules.** `InventoryService.EvaluateReversal` takes data and returns a verdict without touching the database. The preview, the list buttons and the real reversal all call it, and it is easy to reason about.
+- **Returning files.** `Services/ExportService.cs` builds the bytes (CSV text or an Excel workbook from ClosedXML) and returns `FileContentResult` with a content type and a file name; the browser downloads it. Controllers return it from the same action as the JSON list when `?format=` is present.
+- **Exception to HTTP.** `NotFoundException` is mapped to 404 in `Infrastructure/ApiExceptionHandler.cs`, next to the 422 and 409 mappings, so services just `throw`.
+- **Transactions + row lock.** `ReverseAsync` opens a transaction, locks the unit row (`SELECT ... FOR UPDATE`) and **re-checks** the rule after the lock, so two admins cannot reverse the same row.
+
+**React**
+- **Charts with react-chartjs-2.** `pages/reports/SummaryChart.tsx` registers the Chart.js pieces it needs and renders `<Bar data options />`. A canvas cannot read CSS `var(--bs-success)`, so the colour is read with `getComputedStyle`.
+- **Derived UI state.** The summary inputs show `f.from || report.data?.from`: the URL holds only what the user chose, the server's default fills in the rest. Nothing is copied into `useState`.
+- **Forms with zod.** `pages/history/ReverseForm.tsx` uses `zodResolver(reverseSchema)`; a short reason is blocked before any request. A server error is shown with `applyServerErrors`.
+- **Refetch vs optimistic update.** After a reversal `ReversePage.tsx` calls `invalidateQueries` for history, units, dashboard and `['reports']`: React Query reloads the truth from the server. We do not guess the new state locally because the rules live on the server.
+- **Plain links for downloads.** `components/ExportButtons.tsx` renders `<a href download>`; `exportUrl()` is a pure function, so a test pins the URL.
+- **Search params as input.** `pages/ops/useOpsPage.ts` reads `?barcode=` once with `useSearchParams` and gives it to `ScanPanel` as its starting text.

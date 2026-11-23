@@ -10,7 +10,7 @@ import { useOpsPage } from './useOpsPage'
 
 /** /ops/receive: scan a unit, choose the receive point, save. A new barcode also needs its product. */
 export function ReceivePage() {
-  const { barcode, setBarcode, scanId, notice, setNotice, unit, timeZone, finish } = useOpsPage()
+  const { initialBarcode, barcode, setBarcode, scanId, notice, setNotice, unit, timeZone, finish } = useOpsPage()
   const [rememberedPoint, rememberPoint] = useRememberedPoint('ims.receivePoint')
   const [productId, setProductId] = useState('')
   const products = useOptions('products')
@@ -33,7 +33,7 @@ export function ReceivePage() {
     <>
       <h1 className="h4 mb-3">Receive units</h1>
       {notice && <div className="alert alert-success" role="status">{notice}</div>}
-      <ScanPanel key={scanId} committed={barcode} onCommit={(b) => { setBarcode(b); setNotice(null); save.reset() }} />
+      <ScanPanel key={scanId} initialBarcode={initialBarcode} committed={barcode} onCommit={(b) => { setBarcode(b); setNotice(null); save.reset() }} />
       <ScanErrorAlert error={save.error} timeZone={timeZone} />
 
       {unit && (

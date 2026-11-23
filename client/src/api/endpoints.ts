@@ -2,6 +2,7 @@ import { api } from './client'
 import type {
   AppConfig, CreateUserInput, DashboardData, HistoryRow, MasterDataInput, MasterDataRow, MasterKind, Me, Option,
   HistoryFilterOptions, PagedResult, TrackInput, UnitLookup, UpdateUserInput, UserRow,
+  BarcodeReport, ReversePreview, ReverseResult, StockReport, SummaryReport,
 } from './types'
 
 // One small function per API call. Components never build URLs themselves.
@@ -23,6 +24,8 @@ export const dashboardApi = { get: () => api.get<DashboardData>('/api/dashboard'
 export const historyApi = {
   list: (query: string) => api.get<PagedResult<HistoryRow>>(`/api/history?${query}`),
   filterOptions: () => api.get<HistoryFilterOptions>('/api/history/filter-options'),
+  reversePreview: (id: number) => api.get<ReversePreview>(`/api/history/${id}/reverse-preview`),
+  reverse: (id: number, reason: string) => api.post<ReverseResult>(`/api/history/${id}/reverse`, { reason }),
 }
 
 export const unitsApi = {
@@ -54,4 +57,11 @@ export const usersApi = {
   update: (id: number, body: UpdateUserInput) => api.put<UserRow>(`/api/users/${id}`, body),
   toggleActive: (id: number) => api.post<UserRow>(`/api/users/${id}/toggle-active`),
   resetPassword: (id: number, newPassword: string) => api.post<void>(`/api/users/${id}/reset-password`, { newPassword }),
+}
+
+// The three reports (Admin + Report Viewer). `query` is a ready-made query string (see toQueryString).
+export const reportsApi = {
+  stock: (query: string) => api.get<StockReport>(`/api/reports/stock?${query}`),
+  summary: (query: string) => api.get<SummaryReport>(`/api/reports/summary?${query}`),
+  barcode: (barcode: string) => api.get<BarcodeReport>(`/api/reports/barcode?barcode=${encodeURIComponent(barcode)}`),
 }
