@@ -43,3 +43,6 @@
 - **Tests:** `dotnet build -warnaserror` clean; 114 .NET, 39 Vitest, 7 Playwright all passing; test sheet 96 Pass / 0 Fail / 1 Not run.
 - **Not done / for you:** open an export in desktop Excel (case TC-097); rehearse the demo once with a timer; the `ims_fresh` database variant of the fresh-clone check (needs the DB password, see DECISIONS.md).
 - **Tags:** day-6 and v1.0.0.
+
+## v1.0.1 (24 Nov 2026)
+- **Fix:** login failed with "Invalid antiforgery token" when the browser kept a stale XSRF-TOKEN cookie (e.g. after a database reset). The API client now fetches a fresh token and retries the request once (`client/src/api/client.ts`); 2 Vitest regression tests added (41 total).

@@ -45,4 +45,28 @@ describe('request', () => {
     await expect(request('/api/auth/me', { allow401: true })).rejects.toBeInstanceOf(ApiError)
     expect(handler).not.toHaveBeenCalled()
   })
+
+  it('recovers from a stale antiforgery token: fetches a fresh one and retries the POST once', async () => {
+    const calls: string[] = []
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      calls.push((init?.method ?? 'GET') + ' ' + url)
+      if (url === '/api/auth/csrf') return new Response(null, { status: 204 })
+      const firstTry = calls.filter((c) => c.startsWith('POST')).length === 1
+      return firstTry
+        ? new Response(JSON.stringify({ title: 'Invalid antiforgery token', detail: 'Reload the page and try again.' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+        : new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }))
+
+    await expect(request('/api/auth/login', { method: 'POST', body: { userName: 'a', password: 'b' }, allow401: true })).resolves.toEqual({ ok: true })
+    expect(calls.filter((c) => c.startsWith('POST'))).toHaveLength(2) // the original call and exactly one retry
+    expect(calls.at(-2)).toBe('GET /api/auth/csrf') // a fresh token was fetched right before the retry
+  })
+
+  it('does not retry forever: a second antiforgery error is thrown', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => url === '/api/auth/csrf'
+      ? new Response(null, { status: 204 })
+      : new Response(JSON.stringify({ title: 'Invalid antiforgery token' }), { status: 400, headers: { 'Content-Type': 'application/json' } })))
+
+    await expect(request('/api/ops/receive', { method: 'POST', body: {} })).rejects.toMatchObject({ status: 400, title: 'Invalid antiforgery token' })
+  })
 })

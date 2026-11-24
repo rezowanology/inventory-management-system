@@ -2,7 +2,7 @@
 
 **Project:** Inventory Management System (industrial attachment assignment, brief dated 3 Nov 2026)
 **Repository:** https://github.com/rezowanology/inventory-management-system
-**Tag to review:** `v1.0.0` (daily tags `day-1` ... `day-6` are in the history)
+**Tag to review:** `v1.0.1` (the v1.0.0 tag is the first submission build; v1.0.1 adds one login fix; daily tags `day-1` ... `day-6` are in the history)
 
 ## Deliverables
 
@@ -28,13 +28,13 @@
 | Automated tests | `tests/Ims.Tests` (114), `client/src/**/*.test.tsx` (39), `client/e2e` (7 Playwright specs) |
 | Regenerate the SQL files | [scripts/export-sql.ps1](../scripts/export-sql.ps1) |
 
-## Test results (v1.0.0)
+## Test results (v1.0.1)
 
 | Suite | Result |
 |---|---|
 | `dotnet build -warnaserror` | 0 warnings, 0 errors |
 | `dotnet test` | 114 passed |
-| `npm test --prefix client` | 39 passed |
+| `npm test --prefix client` | 41 passed |
 | `npm run build --prefix client` | no TypeScript errors |
 | Playwright (`npm run e2e --prefix client`, demo mode) | 7 passed (smoke flow, 5-role UI matrix, screenshots) |
 | Test-case sheet | 97 cases: 96 Pass, 0 Fail, 1 Not run |

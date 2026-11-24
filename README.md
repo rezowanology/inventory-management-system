@@ -4,7 +4,7 @@ A barcode-based inventory system that follows one physical unit from **component
 It has five roles (one per user, enforced on the server), an append-only inventory history, admin-only reversals,
 reports, CSV/Excel export, an audit log and a dashboard. This is an industrial-attachment learning/demo project.
 
-**Status: v1.0.0 (Day 6 of 6) - complete and tested.** 114 .NET tests, 39 Vitest tests and 7 Playwright end-to-end specs pass;
+**Status: v1.0.1 - complete and tested.** 114 .NET tests, 41 Vitest tests and 7 Playwright end-to-end specs pass;
 the executed test-case sheet is in `docs/testing/`.
 
 ## What it does (mapped to the assignment brief)
@@ -130,7 +130,7 @@ Restart the API after rebuilding the client.
 
 ```powershell
 dotnet test                         # 114 tests against the real ims_test database (dropped and re-created each run)
-npm test --prefix client            # 39 Vitest tests (components and logic)
+npm test --prefix client            # 41 Vitest tests (components and logic)
 npm run e2e --prefix client         # 7 Playwright specs in demo mode: smoke flow, 5-role UI matrix, screenshots
 ```
 The .NET tests reuse the user-secret's host and password but always switch the database name to `ims_test`.

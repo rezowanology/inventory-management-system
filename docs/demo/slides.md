@@ -91,7 +91,7 @@ Dashboard - summary chart - reversal. All 35 screens: `docs/user-guide/`.
 # Testing
 
 - **114** xUnit tests on a real PostgreSQL database (rules R1-R13, policies, triggers, exports, audit)
-- **39** Vitest tests (forms, guards, export links, dashboard)
+- **41** Vitest tests (forms, guards, export links, dashboard)
 - **7** Playwright end-to-end specs (sample flow, 5-role UI matrix, screenshots)
 - **97** executed cases in `docs/testing/test-cases.xlsx`: 96 pass, 1 not run (needs desktop Excel)
 

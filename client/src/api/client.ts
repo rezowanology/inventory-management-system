@@ -66,7 +66,8 @@ interface RequestOptions {
   allow401?: boolean
 }
 
-export async function request<T>(path: string, { method = 'GET', body, allow401 = false }: RequestOptions = {}): Promise<T> {
+export async function request<T>(path: string, options: RequestOptions = {}, isRetry = false): Promise<T> {
+  const { method = 'GET', body, allow401 = false } = options
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (body !== undefined) headers['Content-Type'] = 'application/json'
 
@@ -92,6 +93,12 @@ export async function request<T>(path: string, { method = 'GET', body, allow401 
 
   let errorBody: unknown
   try { errorBody = await response.json() } catch { errorBody = undefined }
+  // A stale XSRF-TOKEN cookie (for example left over from before the database was reset or the keys changed) makes the server
+  // answer 400 "Invalid antiforgery token". Fetch a fresh token and try ONCE more, so the user never has to clear cookies by hand.
+  if (!isRetry && method !== 'GET' && response.status === 400 && (errorBody as { title?: string } | undefined)?.title === 'Invalid antiforgery token') {
+    await fetchCsrf()
+    return request<T>(path, options, true)
+  }
   if (response.status === 401 && !allow401) onUnauthorized?.()
   throw toApiError(response.status, errorBody)
 }

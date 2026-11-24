@@ -39,7 +39,7 @@ Slides: [slides.md](slides.md). Everything below runs in **one browser tab per p
 | **7:30** | **Reports > Stock** (the unit is listed again; chips per receive point). **Reports > Summary**: set 2026-03-27 to 2026-03-30 -> 1/1/1 and the chart. Click **Export Excel** and open the file. | "Every number is computed from the history. Exports use the same filters as the screen." |
 | **8:30** | **Dashboard** (cards, stock by point, *stuck in stock the longest*, recent activity). **Admin > Audit log**: filter action UPDATE, **Show values** on the product rename from step 2:00. | "Audit rows keep old and new values and never any password. The audit log is separate from the inventory history." |
 | **9:15** | Show `docs/diagrams/process-flow.png` and `er-diagram.png`, then `docs/testing/test-cases.xlsx` (97 cases, green). | "The ER diagram matches the database exactly. 114 .NET + 39 Vitest + 7 Playwright tests; every row of the sheet maps to a test." |
-| **9:45** | Open `docs/SUBMISSION.md`. **Q&A.** | "Every deliverable has a path here; the tag to review is v1.0.0." |
+| **9:45** | Open `docs/SUBMISSION.md`. **Q&A.** | "Every deliverable has a path here; the tag to review is v1.0.1." |
 
 ## If something goes wrong
 
